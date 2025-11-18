@@ -83,15 +83,18 @@ Update `terraform.tf` with your R2 configuration:
 
 ```hcl
 backend "s3" {
-  bucket                      = "tf-state-a7f3b2c9d1e4f5g6"  # Your bucket name
-  key                         = "cloudflare/terraform.tfstate"
-  region                      = "auto"  # R2 uses "auto" region
-  endpoint                    = "https://<account-id>.r2.cloudflarestorage.com"
+  bucket     = "tf-state-a7f3b2c9d1e4f5g6"  # Your bucket name
+  key        = "cloudflare/terraform.tfstate"
+  region     = "auto"  # R2 uses "auto" region
+  endpoints  = {
+    s3 = "https://<account-id>.r2.cloudflarestorage.com"
+  }
   access_key                  = ""  # Provided via AWS_ACCESS_KEY_ID env var
   secret_key                  = ""  # Provided via AWS_SECRET_ACCESS_KEY env var
   skip_credentials_validation = true
   skip_region_validation      = true
   skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
   force_path_style            = true
 }
 ```

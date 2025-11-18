@@ -54,10 +54,12 @@ cd infra/cloudflare
 
 # Create backend config
 cat > backend.hcl <<EOF
-bucket                      = "your-bucket-name"
-endpoint                    = "https://your-account-id.r2.cloudflarestorage.com"
-access_key                  = "your-access-key-id"
-secret_key                  = "your-secret-access-key"
+bucket     = "your-bucket-name"
+endpoints  = {
+  s3 = "https://your-account-id.r2.cloudflarestorage.com"
+}
+access_key = "your-access-key-id"
+secret_key = "your-secret-access-key"
 EOF
 
 # Initialize Terraform

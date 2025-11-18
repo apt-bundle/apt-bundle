@@ -43,10 +43,12 @@ jobs:
             exit 1
           fi
           cat > backend.hcl <<EOF
-          bucket                      = "${{ secrets.R2_BUCKET_NAME }}"
-          endpoint                    = "${{ secrets.R2_ENDPOINT }}"
-          access_key                  = "${{ secrets.R2_ACCESS_KEY_ID }}"
-          secret_key                  = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
+          bucket     = "${{ secrets.R2_BUCKET_NAME }}"
+          endpoints  = {
+            s3 = "${{ secrets.R2_ENDPOINT }}"
+          }
+          access_key = "${{ secrets.R2_ACCESS_KEY_ID }}"
+          secret_key = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
           EOF
         env:
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}

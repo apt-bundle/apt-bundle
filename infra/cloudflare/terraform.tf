@@ -28,12 +28,15 @@ terraform {
     bucket                      = "REPLACE_VIA_BACKEND_HCL"
     key                         = "cloudflare/terraform.tfstate"
     region                      = "auto"  # R2 uses "auto" region
-    endpoint                    = "REPLACE_VIA_BACKEND_HCL"
+    endpoints                   = {
+      s3 = "REPLACE_VIA_BACKEND_HCL"
+    }
     access_key                  = "REPLACE_VIA_BACKEND_HCL"
     secret_key                  = "REPLACE_VIA_BACKEND_HCL"
     skip_credentials_validation = true
     skip_region_validation      = true
     skip_metadata_api_check     = true
+    skip_requesting_account_id  = true
     force_path_style            = true
   }
 }
