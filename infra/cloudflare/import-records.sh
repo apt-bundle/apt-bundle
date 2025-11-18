@@ -60,14 +60,20 @@ echo ""
 # Check if terraform is initialized
 if [ ! -d ".terraform" ]; then
     echo "Initializing Terraform..."
-    terraform init
+    # Check if backend.hcl exists for R2 backend configuration
+    if [ -f "backend.hcl" ]; then
+        terraform init -backend-config=backend.hcl
+    else
+        echo "Warning: backend.hcl not found. Initializing with default/local backend."
+        terraform init
+    fi
 fi
 
 echo "Importing root domain record..."
-terraform import cloudflare_record.root "$CLOUDFLARE_ZONE_ID/$ROOT_RECORD_ID"
+terraform import -var="cloudflare_zone_id=$CLOUDFLARE_ZONE_ID" cloudflare_record.root "$CLOUDFLARE_ZONE_ID/$ROOT_RECORD_ID"
 
 echo "Importing www subdomain record..."
-terraform import cloudflare_record.www "$CLOUDFLARE_ZONE_ID/$WWW_RECORD_ID"
+terraform import -var="cloudflare_zone_id=$CLOUDFLARE_ZONE_ID" cloudflare_record.www "$CLOUDFLARE_ZONE_ID/$WWW_RECORD_ID"
 
 echo ""
 echo "✅ Import complete!"
