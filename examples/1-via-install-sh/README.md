@@ -1,6 +1,14 @@
-# Basic Development Environment
+# Installing apt-bundle via install.sh Script
 
-A simple Docker setup demonstrating how to use `apt-bundle` to install common development tools.
+A simple example demonstrating the easiest way to install `apt-bundle` using the installation script.
+
+## Installation Method
+
+This example uses the `install.sh` script, which is the simplest installation method:
+
+```dockerfile
+RUN curl -fsSL https://raw.githubusercontent.com/apt-bundle/apt-bundle/main/install.sh | bash
+```
 
 ## What's Included
 
@@ -20,9 +28,16 @@ make build
 make run
 
 # Or use Docker directly
-docker build -t basic-dev .
-docker run -it basic-dev
+docker build -t via-install-sh .
+docker run -it via-install-sh
 ```
+
+## When to Use This Method
+
+- **Quick prototyping** - Fastest way to get started
+- **Development environments** - Simple one-liner installation
+- **Scripts and automation** - Easy to add to existing scripts
+- **When you don't need version pinning** - Always gets the latest release
 
 ## Comparison
 
@@ -33,4 +48,3 @@ See `Dockerfile.traditional` for the equivalent Dockerfile without apt-bundle. T
 - Harder to version control dependency changes
 
 Using apt-bundle provides a cleaner, more maintainable solution where dependencies are declared in `Aptfile` and can be easily shared and version controlled.
-

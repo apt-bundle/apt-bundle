@@ -1,4 +1,4 @@
-IMAGE_NAME ?= ci-builder
+IMAGE_NAME ?= via-apt-get
 IMAGE_TAG ?= latest
 
 .DEFAULT_GOAL := help

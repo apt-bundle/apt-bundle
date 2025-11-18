@@ -3,13 +3,15 @@ FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install prerequisites and apt-bundle
+# Install prerequisites and apt-bundle from APT repository
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -fsSL https://raw.githubusercontent.com/apt-bundle/apt-bundle/main/install.sh | bash
+    echo "deb [arch=amd64,arm64,armhf,i386] [trusted=yes] https://apt-bundle.org/repo/ stable main" | tee /etc/apt/sources.list.d/apt-bundle.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends apt-bundle && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install build dependencies
 COPY Aptfile.build /app/Aptfile.build
@@ -25,13 +27,15 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install prerequisites and apt-bundle
+# Install prerequisites and apt-bundle from APT repository
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -fsSL https://raw.githubusercontent.com/apt-bundle/apt-bundle/main/install.sh | bash
+    echo "deb [arch=amd64,arm64,armhf,i386] [trusted=yes] https://apt-bundle.org/repo/ stable main" | tee /etc/apt/sources.list.d/apt-bundle.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends apt-bundle && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install runtime dependencies only
 COPY Aptfile.runtime /app/Aptfile.runtime

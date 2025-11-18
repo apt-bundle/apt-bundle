@@ -1,0 +1,34 @@
+# Compiler toolchain
+apt build-essential
+apt cmake
+apt pkg-config
+apt autoconf
+apt automake
+apt libtool
+
+# Version control and source fetching
+apt git
+apt git-lfs
+apt curl
+apt wget
+
+# Development libraries
+apt libssl-dev
+apt libffi-dev
+apt libbz2-dev
+apt libreadline-dev
+apt libsqlite3-dev
+apt libncurses5-dev
+apt libncursesw5-dev
+apt zlib1g-dev
+apt liblzma-dev
+
+# Image processing libraries (for building image processing tools)
+apt libjpeg-dev
+apt libpng-dev
+apt libtiff-dev
+
+# Database development libraries
+apt libpq-dev
+apt libmysqlclient-dev
+

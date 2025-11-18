@@ -1,98 +1,77 @@
 # Dockerfile Examples with Aptfile
 
-This directory contains practical examples demonstrating how to use `apt-bundle` with Dockerfiles in various scenarios.
+This directory contains practical examples demonstrating different ways to use `apt-bundle` with Dockerfiles.
 
-## Quick Example
+## Examples Overview
 
-Here's a basic example of using `apt-bundle` in a Dockerfile:
+The examples are organized by **installation method** and **complexity**, not by package types:
 
-```dockerfile
-FROM ubuntu:22.04
+### 1. Via install.sh Script (`1-via-install-sh/`)
+**Simplest approach** - Quick installation using the install script.
 
-# Prevent interactive prompts during apt operations
-ENV DEBIAN_FRONTEND=noninteractive
+- ✅ Fastest to get started
+- ✅ One-liner installation
+- ✅ Always gets latest version
+- ⚠️ No version pinning
 
-# Install prerequisites and apt-bundle
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -fsSL https://raw.githubusercontent.com/apt-bundle/apt-bundle/main/install.sh | bash
+**Best for:** Quick prototyping, development environments, scripts
 
-# Copy Aptfile and install dependencies
-COPY Aptfile /app/Aptfile
-WORKDIR /app
-RUN apt-bundle install --file /app/Aptfile
+### 2. Via APT Repository (`2-via-apt-get/`)
+**Production-ready approach** - Install from official APT repository.
 
-# Your application code
-COPY . /app
-CMD ["/bin/bash"]
-```
+- ✅ Version control
+- ✅ Better caching
+- ✅ Multi-architecture support
+- ✅ Production-ready
 
-Each example includes:
-- **Dockerfile** - Demonstrates apt-bundle usage
-- **Aptfile** - Declares system dependencies
-- **Makefile** - Convenient build and run commands
-- **README.md** - Example-specific documentation
+**Best for:** Production Docker images, CI/CD pipelines, when you need specific versions
 
-## Examples
+### 3. Complex via APT Repository (`3-complex-via-apt-get/`)
+**Advanced pattern** - Multi-stage builds with many dependencies using APT repository.
 
-### 1. Basic Development Environment (`1-basic-dev/`)
-A simple web application setup with common development tools like git, curl, vim, and network utilities.
+- ✅ Multi-stage build pattern
+- ✅ Many dependencies (build + runtime)
+- ✅ Optimized production images
+- ✅ Clear separation of concerns
 
-**Quick Start:**
+**Best for:** Production applications, complex builds, optimized deployments
+
+## Quick Start
+
+### Example 1: Simple install.sh approach
 ```bash
-cd 1-basic-dev
+cd 1-via-install-sh
 make build
 make run
 ```
 
-### 2. Multi-Stage Build (`2-multi-stage/`)
-Demonstrates separating build dependencies from runtime dependencies to create smaller production images.
-
-**Quick Start:**
+### Example 2: APT repository approach
 ```bash
-cd 2-multi-stage
+cd 2-via-apt-get
 make build
 make run
 ```
 
-### 3. Python Runtime (`3-python-runtime/`)
-Python application requiring system libraries for image processing, database connectivity, and SSL.
-
-**Quick Start:**
+### Example 3: Complex multi-stage
 ```bash
-cd 3-python-runtime
-make build  # Creates requirements.txt if missing
-make run
-```
-
-### 4. CI/CD Build Image (`4-ci-cd/`)
-Docker image for CI/CD pipelines with build tools, testing frameworks, Docker CLI, and cloud tools.
-
-**Quick Start:**
-```bash
-cd 4-ci-cd
-make build
-make run  # Includes Docker socket mount
-```
-
-### 5. Database Clients (`5-database-clients/`)
-Image with database clients (PostgreSQL, MySQL, Redis, MongoDB) and monitoring/debugging tools.
-
-**Quick Start:**
-```bash
-cd 5-database-clients
+cd 3-complex-via-apt-get
 make build
 make run
-# Or connect to databases: make psql DB_HOST=host DB_NAME=db
 ```
+
+## Installation Methods Comparison
+
+| Method | Speed | Version Control | Production Ready | Multi-Arch |
+|--------|-------|----------------|------------------|------------|
+| install.sh | ⚡ Fastest | ❌ No | ⚠️ Limited | ✅ Yes |
+| APT Repository | ⚡ Fast | ✅ Yes | ✅ Yes | ✅ Yes |
 
 ## Common Patterns
 
 All examples follow these patterns:
 
-1. **Install apt-bundle**: Use the install script for simple one-line installation
-2. **Copy Aptfile**: Place the Aptfile in the container
+1. **Install apt-bundle**: Either via install.sh or APT repository
+2. **Copy Aptfile**: Place the Aptfile(s) in the container
 3. **Run apt-bundle**: Install dependencies from the Aptfile
 4. **Clean up**: Remove apt cache to reduce image size (where applicable)
 
@@ -100,6 +79,5 @@ All examples follow these patterns:
 
 - All examples use `ubuntu:22.04` as the base image, but can be adapted for other Debian-based distributions
 - The `DEBIAN_FRONTEND=noninteractive` environment variable prevents interactive prompts during package installation
-- The apt-bundle installation uses the install script which automatically fetches the latest release from GitHub
+- The APT repository examples use `[trusted=yes]` because the repository is currently unsigned
 - Each example can be customized to fit your specific needs
-

@@ -1,4 +1,0 @@
-# Runtime dependencies only
-apt ca-certificates
-apt libssl3
-
