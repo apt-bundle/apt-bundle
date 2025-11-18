@@ -2,6 +2,8 @@
 
 Docker image for CI/CD pipelines with build tools, testing frameworks, Docker CLI, and cloud provider tools.
 
+This example demonstrates installing `apt-bundle` from the official APT repository at `https://apt-bundle.org/repo/`.
+
 ## What's Included
 
 - Build tools: `build-essential`, `cmake`, `pkg-config`
@@ -40,4 +42,21 @@ See `Dockerfile.traditional` for the equivalent Dockerfile without apt-bundle. T
 - Hard to share CI/CD dependency lists across projects
 
 Using apt-bundle simplifies this significantly by handling repository setup, GPG keys, and package installation declaratively through the `Aptfile`.
+
+## Installing apt-bundle
+
+This example installs `apt-bundle` from the official APT repository:
+
+```dockerfile
+RUN echo "deb [arch=amd64,arm64,armhf,i386] [trusted=yes] https://apt-bundle.org/repo/ stable main" | tee /etc/apt/sources.list.d/apt-bundle.list && \
+    apt-get update && \
+    apt-get install -y apt-bundle
+```
+
+Note: The `trusted=yes` flag is used because the repository is unsigned. For production use, consider setting up GPG signing for the repository.
+
+Alternatively, you can use the installation script:
+```dockerfile
+RUN curl -fsSL https://raw.githubusercontent.com/apt-bundle/apt-bundle/main/install.sh | bash
+```
 
