@@ -79,27 +79,33 @@ openssl rand -hex 8 | sed 's/^/tf-state-/'
 
 ### Step 4: Configure Terraform Backend
 
-Update `terraform.tf` with your R2 configuration:
+The backend is configured using a partial configuration approach. The `terraform.tf` file contains the skip flags:
 
 ```hcl
 backend "s3" {
-  bucket     = "tf-state-a7f3b2c9d1e4f5g6"  # Your bucket name
-  key        = "cloudflare/terraform.tfstate"
-  region     = "auto"  # R2 uses "auto" region
-  endpoints  = {
-    s3 = "https://<account-id>.r2.cloudflarestorage.com"
-  }
-  access_key                  = ""  # Provided via AWS_ACCESS_KEY_ID env var
-  secret_key                  = ""  # Provided via AWS_SECRET_ACCESS_KEY env var
   skip_credentials_validation = true
-  skip_region_validation      = true
   skip_metadata_api_check     = true
+  skip_region_validation      = true
   skip_requesting_account_id  = true
+  skip_s3_checksum            = true
   use_path_style              = true
 }
 ```
 
-Replace `<account-id>` with your actual Account ID.
+The actual backend configuration (bucket, credentials, endpoint) is provided via a separate `backend.hcl` file:
+
+```hcl
+bucket    = "tf-state-a7f3b2c9d1e4f5g6"
+key       = "cloudflare/terraform.tfstate"
+region    = "auto"
+endpoints = {
+  s3 = "https://<account-id>.r2.cloudflarestorage.com"
+}
+access_key = "<your-access-key-id>"
+secret_key = "<your-secret-access-key>"
+```
+
+Replace `<account-id>`, `<your-access-key-id>`, and `<your-secret-access-key>` with your actual values. **Do not commit `backend.hcl` to version control** (it's in `.gitignore`).
 
 ### Step 5: Add GitHub Secrets
 

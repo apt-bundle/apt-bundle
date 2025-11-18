@@ -36,7 +36,7 @@ jobs:
         continue-on-error: true
 
       - name: Configure R2 Backend
-        if: env.R2_BUCKET_NAME != ''
+        if: secrets.R2_BUCKET_NAME != ''
         run: |
           if [ -z "${{ secrets.R2_BUCKET_NAME }}" ]; then
             echo "Warning: R2_BUCKET_NAME secret is empty or not set"
