@@ -18,22 +18,11 @@ output "www_record" {
   }
 }
 
-output "repo_record" {
-  description = "Repository subdomain DNS record details"
-  value = {
-    name    = cloudflare_record.repo.hostname
-    type    = cloudflare_record.repo.type
-    content = cloudflare_record.repo.content
-    proxied = cloudflare_record.repo.proxied
-  }
-}
-
 output "all_records" {
   description = "Summary of all managed DNS records"
   value = {
     root = cloudflare_record.root.hostname
     www  = cloudflare_record.www.hostname
-    repo = cloudflare_record.repo.hostname
   }
 }
 

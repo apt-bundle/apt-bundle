@@ -24,18 +24,7 @@ resource "cloudflare_record" "www" {
   ttl     = 1 # Auto TTL when proxied
 }
 
-# APT repository subdomain CNAME to GitHub Pages
-# IMPORTANT: This record is NOT proxied (proxied = false)
-# Reason: APT package managers need direct DNS resolution and don't work
-# properly with Cloudflare's proxy. APT clients expect direct access to
-# the origin server and may fail with SSL/TLS issues when proxied.
-resource "cloudflare_record" "repo" {
-  zone_id = var.cloudflare_zone_id
-  name    = "repo"
-  type    = "CNAME"
-  content = var.github_pages_target
-  proxied = false
-  comment = "APT repository subdomain - NOT proxied for APT client compatibility"
-  ttl     = 300 # 5 minutes - standard TTL for non-proxied records
-}
+# Note: APT repository is served from apt-bundle.org/repo/ path instead of
+# repo.apt-bundle.org subdomain due to GitHub Pages limitation of one custom
+# domain per repository. The repo subdomain DNS record has been removed.
 
