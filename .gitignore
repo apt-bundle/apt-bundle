@@ -34,6 +34,7 @@ go.work
 # End of https://www.toptal.com/developers/gitignore/api/go
 
 # Environment variables
+# Note: .env is a symlink to .local/secrets/.env (secrets directory is gitignored)
 .env
 
 # Jekyll build artifacts (in docs/)
@@ -60,4 +61,5 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+# Note: backend.hcl is a symlink to .local/secrets/backend.hcl (secrets directory is gitignored)
 backend.hcl
