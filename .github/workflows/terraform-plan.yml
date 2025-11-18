@@ -43,12 +43,17 @@ jobs:
             exit 1
           fi
           cat > backend.hcl <<EOF
-          bucket     = "${{ secrets.R2_BUCKET_NAME }}"
-          endpoints  = {
+          bucket                      = "${{ secrets.R2_BUCKET_NAME }}"
+          endpoints                   = {
             s3 = "${{ secrets.R2_ENDPOINT }}"
           }
-          access_key = "${{ secrets.R2_ACCESS_KEY_ID }}"
-          secret_key = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
+          access_key                  = "${{ secrets.R2_ACCESS_KEY_ID }}"
+          secret_key                  = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
+          skip_credentials_validation = true
+          skip_region_validation      = true
+          skip_metadata_api_check     = true
+          skip_requesting_account_id  = true
+          use_path_style              = true
           EOF
         env:
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
