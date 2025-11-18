@@ -21,23 +21,10 @@ terraform {
   #   - R2_ENDPOINT (GitHub Secret)
   #
   # See r2-setup.md for secure setup instructions
+  # Backend configuration is provided entirely via backend.hcl
+  # The backend.hcl file is generated automatically in GitHub Actions from secrets
+  # For local development, create backend.hcl manually (it's gitignored)
   backend "s3" {
-    # These values MUST be provided via -backend-config=backend.hcl
-    # The backend.hcl file is generated automatically in GitHub Actions from secrets
-    # For local development, create backend.hcl manually (it's gitignored)
-    bucket                      = "REPLACE_VIA_BACKEND_HCL"
-    key                         = "cloudflare/terraform.tfstate"
-    region                      = "auto"  # R2 uses "auto" region
-    endpoints                   = {
-      s3 = "REPLACE_VIA_BACKEND_HCL"
-    }
-    access_key                  = "REPLACE_VIA_BACKEND_HCL"
-    secret_key                  = "REPLACE_VIA_BACKEND_HCL"
-    skip_credentials_validation = true
-    skip_region_validation      = true
-    skip_metadata_api_check     = true
-    skip_requesting_account_id  = true
-    use_path_style              = true
   }
 }
 
