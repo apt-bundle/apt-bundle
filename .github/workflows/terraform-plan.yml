@@ -49,12 +49,8 @@ jobs:
           endpoints  = {
             s3 = "${{ secrets.R2_ENDPOINT }}"
           }
-          access_key                  = "${{ secrets.R2_ACCESS_KEY_ID }}"
-          secret_key                  = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
-          skip_credentials_validation = true
-          skip_region_validation      = true
-          skip_metadata_api_check     = true
-          use_path_style              = true
+          access_key = "${{ secrets.R2_ACCESS_KEY_ID }}"
+          secret_key = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
           EOF
         env:
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}

@@ -21,10 +21,16 @@ terraform {
   #   - R2_ENDPOINT (GitHub Secret)
   #
   # See r2-setup.md for secure setup instructions
-  # Backend configuration is provided entirely via backend.hcl
+  # Partial backend configuration - sensitive values provided via backend.hcl
   # The backend.hcl file is generated automatically in GitHub Actions from secrets
   # For local development, create backend.hcl manually (it's gitignored)
   backend "s3" {
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    skip_s3_checksum            = true
+    use_path_style              = true
   }
 }
 
