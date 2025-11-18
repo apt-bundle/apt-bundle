@@ -3,18 +3,35 @@ FROM ubuntu:22.04
 # Prevent interactive prompts during apt operations
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install all packages manually
+# Install prerequisites
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
-        build-essential \
+        software-properties-common && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add PPAs manually (requires software-properties-common)
+RUN add-apt-repository -y ppa:ondrej/php && \
+    add-apt-repository -y ppa:git-core/ppa && \
+    add-apt-repository -y ppa:chris-lea/node.js
+
+# Update package lists after adding PPAs
+RUN apt-get update
+
+# Install all packages manually
+RUN apt-get install -y --no-install-recommends \
+        php8.2 \
+        php8.2-cli \
+        php8.2-fpm \
+        php8.2-mysql \
+        php8.2-xml \
         git \
-        vim \
-        jq \
-        htop \
-        wget \
-        net-tools && \
+        nodejs \
+        npm \
+        build-essential \
+        curl \
+        vim && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -22,4 +39,3 @@ RUN apt-get update && \
 WORKDIR /app
 COPY . /app
 CMD ["/bin/bash"]
-
