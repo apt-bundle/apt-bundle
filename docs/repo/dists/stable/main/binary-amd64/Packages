@@ -1,0 +1,22 @@
+Package: apt-bundle
+Version: 0.1.8
+Architecture: amd64
+Maintainer: maintainers@apt-bundle.org
+Installed-Size: 2348
+Depends: apt
+Recommends: curl
+Suggests: git
+Filename: pool/main/a/apt-bundle/apt-bundle_0.1.8_linux_amd64.deb
+Size: 1048798
+MD5sum: d3e0cf07d5c12f73926f83751a32bd85
+SHA1: b349f6bfa9c7824266a1054b9b3b275fd5cec4ef
+SHA256: 2cf19024653934fced686d4cc87a2ab430b584ed866688a06633d592bad4bc99
+Section: utils
+Priority: optional
+Homepage: https://apt-bundle.github.io/apt-bundle
+Description: A declarative package manager for apt, inspired by Homebrew's brew bundle.
+ apt-bundle provides a simple, declarative, and shareable way to manage
+ apt packages and repositories on Debian-based systems.
+License: MIT
+
+dpkg-scanpackages: info: Wrote 1 entries to output Packages file.

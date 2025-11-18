@@ -1,0 +1,21 @@
+Package: apt-bundle
+Version: 0.1.8
+Architecture: armhf
+Maintainer: maintainers@apt-bundle.org
+Installed-Size: 2368
+Depends: apt
+Recommends: curl
+Suggests: git
+Filename: pool/main/a/apt-bundle/apt-bundle_0.1.8_linux_armhf.deb
+Size: 996130
+MD5sum: e28d92a975e41ae1efaa858973eb78d3
+SHA1: 47e728d5bfc15dc2cc42999ce77d042acc8aff79
+SHA256: 3fe60b6206fba2b51f958235687c30ed60d8b138560d573c1215ea6e546601bc
+Section: utils
+Priority: optional
+Homepage: https://apt-bundle.github.io/apt-bundle
+Description: A declarative package manager for apt, inspired by Homebrew's brew bundle.
+ apt-bundle provides a simple, declarative, and shareable way to manage
+ apt packages and repositories on Debian-based systems.
+License: MIT
+
