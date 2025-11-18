@@ -36,11 +36,10 @@ jobs:
         continue-on-error: true
 
       - name: Configure R2 Backend
-        if: secrets.R2_BUCKET_NAME != ''
         run: |
           if [ -z "${{ secrets.R2_BUCKET_NAME }}" ]; then
-            echo "Warning: R2_BUCKET_NAME secret is empty or not set"
-            exit 1
+            echo "Warning: R2_BUCKET_NAME secret is empty or not set. Skipping R2 backend configuration."
+            exit 0
           fi
           cat > backend.hcl <<EOF
           bucket     = "${{ secrets.R2_BUCKET_NAME }}"
