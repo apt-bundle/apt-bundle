@@ -3,7 +3,7 @@ output "root_domain_record" {
   value = {
     name    = cloudflare_record.root.hostname
     type    = cloudflare_record.root.type
-    value   = cloudflare_record.root.value
+    content = cloudflare_record.root.content
     proxied = cloudflare_record.root.proxied
   }
 }
@@ -13,7 +13,7 @@ output "www_record" {
   value = {
     name    = cloudflare_record.www.hostname
     type    = cloudflare_record.www.type
-    value   = cloudflare_record.www.value
+    content = cloudflare_record.www.content
     proxied = cloudflare_record.www.proxied
   }
 }
@@ -23,7 +23,7 @@ output "repo_record" {
   value = {
     name    = cloudflare_record.repo.hostname
     type    = cloudflare_record.repo.type
-    value   = cloudflare_record.repo.value
+    content = cloudflare_record.repo.content
     proxied = cloudflare_record.repo.proxied
   }
 }

@@ -6,7 +6,7 @@ resource "cloudflare_record" "root" {
   zone_id = var.cloudflare_zone_id
   name    = "@"
   type    = "CNAME"
-  value   = var.github_pages_target
+  content = var.github_pages_target
   proxied = true
   comment = "Root domain pointing to GitHub Pages for main website"
   ttl     = 1 # Auto TTL when proxied
@@ -18,7 +18,7 @@ resource "cloudflare_record" "www" {
   zone_id = var.cloudflare_zone_id
   name    = "www"
   type    = "CNAME"
-  value   = var.github_pages_target
+  content = var.github_pages_target
   proxied = true
   comment = "www subdomain pointing to GitHub Pages for main website"
   ttl     = 1 # Auto TTL when proxied
@@ -33,7 +33,7 @@ resource "cloudflare_record" "repo" {
   zone_id = var.cloudflare_zone_id
   name    = "repo"
   type    = "CNAME"
-  value   = var.github_pages_target
+  content = var.github_pages_target
   proxied = false
   comment = "APT repository subdomain - NOT proxied for APT client compatibility"
   ttl     = 300 # 5 minutes - standard TTL for non-proxied records
