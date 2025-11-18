@@ -8,9 +8,8 @@ This Terraform configuration manages the following DNS records:
 
 - **Root domain** (`apt-bundle.org`) → CNAME to `apt-bundle.github.io` (proxied)
 - **WWW subdomain** (`www.apt-bundle.org`) → CNAME to `apt-bundle.github.io` (proxied)
-- **Repository subdomain** (`repo.apt-bundle.org`) → CNAME to `apt-bundle.github.io` (NOT proxied)
 
-> **Important:** The `repo.apt-bundle.org` record is intentionally NOT proxied because APT package managers require direct DNS resolution and do not work properly with Cloudflare's proxy.
+> **Note:** The APT repository is served from `apt-bundle.org/repo/` path instead of a subdomain due to GitHub Pages limitation of one custom domain per repository. The `repo.apt-bundle.org` DNS record was previously managed here but has been removed.
 
 ## Prerequisites
 
@@ -250,12 +249,9 @@ dig apt-bundle.org CNAME +short
 
 # Check www subdomain
 dig www.apt-bundle.org CNAME +short
-
-# Check repo subdomain
-dig repo.apt-bundle.org CNAME +short
 ```
 
-All should resolve to `apt-bundle.github.io`.
+Both should resolve to `apt-bundle.github.io`.
 
 ### Verify Proxied Status
 
@@ -263,20 +259,19 @@ All should resolve to `apt-bundle.github.io`.
 # Root and www should be proxied (Cloudflare IPs)
 dig apt-bundle.org +short
 dig www.apt-bundle.org +short
-
-# Repo should NOT be proxied (direct GitHub Pages IPs)
-dig repo.apt-bundle.org +short
 ```
+
+Both should return Cloudflare IP addresses, indicating they are proxied.
 
 ### Test APT Repository Access
 
-The `repo.apt-bundle.org` subdomain should be accessible directly (not proxied):
+The APT repository is served from `apt-bundle.org/repo/` path:
 
 ```bash
-curl -I https://repo.apt-bundle.org
+curl -I https://apt-bundle.org/repo/
 ```
 
-This should return GitHub Pages headers, not Cloudflare headers.
+This should return GitHub Pages headers with a 200 or appropriate status code.
 
 ## Workflow Details
 
