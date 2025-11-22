@@ -8,6 +8,29 @@ GOFLAGS=-ldflags="-s -w -X github.com/apt-bundle/apt-bundle/internal/commands.ve
 INSTALL_DIR ?= /usr/local/bin
 USE_SUDO ?= sudo
 
+# Show help
+help:
+	@echo "Available targets:"
+	@echo "  build               - Build the binary"
+	@echo "  install             - Install the binary to $(INSTALL_DIR) (may require sudo)"
+	@echo "  uninstall           - Remove the binary from $(INSTALL_DIR)"
+	@echo "  clean               - Remove build artifacts and coverage reports"
+	@echo "  test                - Run tests"
+	@echo "  test-coverage       - Run tests with coverage report"
+	@echo "  test-coverage-html  - Run tests with HTML coverage report"
+	@echo "  fmt                 - Format code"
+	@echo "  vet                 - Run go vet"
+	@echo "  lint                - Run golangci-lint"
+	@echo "  deps                - Download and tidy dependencies"
+	@echo "  package             - Build .deb packages locally using nfpm"
+	@echo "  ci-test             - Test CI build step locally (mimics GitHub Actions)"
+	@echo "  release-test        - Test release workflow locally (dry-run)"
+	@echo "  help                - Show this help message"
+	@echo ""
+	@echo "Environment variables:"
+	@echo "  INSTALL_DIR - Installation directory (default: /usr/local/bin)"
+	@echo "  USE_SUDO    - Command prefix for install/uninstall (default: sudo, set to empty for no sudo)"
+
 # Build the binary
 build:
 	@echo "Building $(BINARY_NAME)..."
@@ -146,27 +169,3 @@ release-test:
 	@echo "VERSION file contents: $$(cat VERSION)"
 	@echo "This would calculate next patch version based on existing releases"
 	@echo "Run 'make package' to build packages locally"
-
-# Show help
-help:
-	@echo "Available targets:"
-	@echo "  build               - Build the binary"
-	@echo "  install             - Install the binary to $(INSTALL_DIR) (may require sudo)"
-	@echo "  uninstall           - Remove the binary from $(INSTALL_DIR)"
-	@echo "  clean               - Remove build artifacts and coverage reports"
-	@echo "  test                - Run tests"
-	@echo "  test-coverage       - Run tests with coverage report"
-	@echo "  test-coverage-html  - Run tests with HTML coverage report"
-	@echo "  fmt                 - Format code"
-	@echo "  vet                 - Run go vet"
-	@echo "  lint                - Run golangci-lint"
-	@echo "  deps                - Download and tidy dependencies"
-	@echo "  package             - Build .deb packages locally using nfpm"
-	@echo "  ci-test             - Test CI build step locally (mimics GitHub Actions)"
-	@echo "  release-test        - Test release workflow locally (dry-run)"
-	@echo "  help                - Show this help message"
-	@echo ""
-	@echo "Environment variables:"
-	@echo "  INSTALL_DIR - Installation directory (default: /usr/local/bin)"
-	@echo "  USE_SUDO    - Command prefix for install/uninstall (default: sudo, set to empty for no sudo)"
-

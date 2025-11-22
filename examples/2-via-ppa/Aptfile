@@ -4,18 +4,10 @@ ppa ppa:ondrej/php
 apt php8.2
 apt php8.2-cli
 apt php8.2-fpm
-apt php8.2-mysql
-apt php8.2-xml
 
 # Git from PPA (newer versions than Ubuntu repos)
 ppa ppa:git-core/ppa
 apt git
-
-# Node.js from NodeSource (via PPA-like setup)
-# Note: This demonstrates that apt-bundle handles PPAs seamlessly
-ppa ppa:chris-lea/node.js
-apt nodejs
-apt npm
 
 # Development tools from standard repos
 apt build-essential
