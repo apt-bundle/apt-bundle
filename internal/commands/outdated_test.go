@@ -40,7 +40,8 @@ func TestRunOutdated(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			switch name {
 			case "dpkg-query":
-				if len(args) >= 4 && args[2] == "${Version}" && args[3] == "curl" {
+				// GetInstalledVersion: dpkg-query -W -f=${Version} <pkg> => args are [-W, -f=${Version}, pkg]
+				if len(args) >= 3 && args[2] == "curl" {
 					return []byte("1.0\n"), nil
 				}
 			case "apt-cache":
@@ -48,7 +49,7 @@ func TestRunOutdated(t *testing.T) {
 					return []byte("curl:\n  Installed: 1.0\n  Candidate: 1.0\n"), nil
 				}
 			case "dpkg":
-				// 1.0 lt 1.0 -> false, so command fails (err != nil)
+				// 1.0 == 1.0 so CompareVersions never calls dpkg; if we get here, fail
 				return nil, errors.New("compare failed")
 			}
 			return nil, errors.New("unexpected command: " + name)
@@ -64,13 +65,19 @@ func TestRunOutdated(t *testing.T) {
 		os.Stdout, os.Stderr = w, w
 		defer func() { os.Stdout, os.Stderr = oldOut, oldErr; w.Close() }()
 
+		var buf bytes.Buffer
+		done := make(chan struct{})
+		go func() {
+			_, _ = buf.ReadFrom(r)
+			close(done)
+		}()
+
 		err = runOutdated(outdatedCmd, nil)
+		w.Close()
+		<-done
 		if err != nil {
 			t.Fatalf("runOutdated: %v", err)
 		}
-		w.Close()
-		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(r)
 		// Should not exit 1 when nothing outdated; we didn't call os.Exit
 		if buf.String() != "" {
 			t.Logf("output: %s", buf.String())
@@ -85,7 +92,8 @@ func TestRunOutdated(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			switch name {
 			case "dpkg-query":
-				if len(args) >= 4 && args[3] == "curl" {
+				// GetInstalledVersion: args are [-W, -f=${Version}, pkg]
+				if len(args) >= 3 && args[2] == "curl" {
 					return []byte("1.0\n"), nil
 				}
 			case "apt-cache":

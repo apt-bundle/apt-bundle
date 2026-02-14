@@ -43,13 +43,19 @@ func TestRunDoctor(t *testing.T) {
 		os.Stdout, os.Stderr = w, w
 		defer func() { os.Stdout, os.Stderr = oldOut, oldErr; w.Close() }()
 
+		var buf bytes.Buffer
+		done := make(chan struct{})
+		go func() {
+			_, _ = buf.ReadFrom(r)
+			close(done)
+		}()
+
 		err = runDoctor(doctorCmd, nil)
+		w.Close()
+		<-done
 		if err != nil {
 			t.Fatalf("runDoctor: %v", err)
 		}
-		w.Close()
-		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(r)
 		out := buf.String()
 		if !bytes.Contains([]byte(out), []byte("Aptfile valid")) {
 			t.Errorf("output should contain 'Aptfile valid', got: %s", out)
@@ -69,13 +75,19 @@ func TestRunDoctor(t *testing.T) {
 		os.Stderr = w
 		defer func() { os.Stderr = oldErr; w.Close() }()
 
+		var buf bytes.Buffer
+		done := make(chan struct{})
+		go func() {
+			_, _ = buf.ReadFrom(r)
+			close(done)
+		}()
+
 		err = runDoctor(doctorCmd, nil)
+		w.Close()
+		<-done
 		if err != nil {
 			t.Fatalf("runDoctor: %v", err)
 		}
-		w.Close()
-		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(r)
 		if !bytes.Contains(buf.Bytes(), []byte("not found")) {
 			t.Errorf("stderr should warn about missing Aptfile, got: %s", buf.String())
 		}
