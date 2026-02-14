@@ -105,6 +105,11 @@ sudo apt-bundle sync
 # Check if packages are installed (no root required)
 apt-bundle check
 
+# Validate Aptfile and check environment (apt-get, add-apt-repository, state)
+apt-bundle doctor
+# Only validate Aptfile (no environment checks)
+apt-bundle doctor --aptfile-only
+
 # List packages with available upgrades (exit 1 if any; for CI)
 apt-bundle outdated
 
