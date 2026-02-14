@@ -71,12 +71,12 @@ func ResetLookPath() {
 
 // DebRepository represents a parsed deb repository configuration
 type DebRepository struct {
-	Types        string // "deb" or "deb-src"
-	URIs         string
-	Suites       string
-	Components   string
+	Types         string // "deb" or "deb-src"
+	URIs          string
+	Suites        string
+	Components    string
 	Architectures string
-	SignedBy     string // Path to the GPG key file
+	SignedBy      string // Path to the GPG key file
 }
 
 // AddDebRepository adds a deb repository in DEB822 format to /etc/apt/sources.list.d/
