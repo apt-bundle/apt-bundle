@@ -1,0 +1,22 @@
+---
+description: When merging PRs with gh, use squash merge so main stays linear (one commit per PR).
+alwaysApply: true
+---
+
+# GitHub PR merge behavior
+
+When merging pull requests using the `gh` CLI, **always use squash merge** so that `main` has a linear history (one commit per PR) and no merge commits.
+
+Use:
+
+```bash
+gh pr merge <number> --squash
+```
+
+Do **not** use:
+
+```bash
+gh pr merge <number> --merge
+```
+
+This matches the repo preference for squash merging (configure in GitHub: Settings → General → Pull Requests → allow squash merging and default to squash merging).
