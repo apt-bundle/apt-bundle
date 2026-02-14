@@ -2,8 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
+	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +26,15 @@ func runDump(cmd *cobra.Command, args []string) error {
 	fmt.Println("# Generated on:", getCurrentTime())
 	fmt.Println()
 
-	// TODO: Query apt-mark, list sources, format as Aptfile directives
+	packages, err := apt.GetAllInstalledPackages()
+	if err != nil {
+		return fmt.Errorf("failed to list installed packages: %w", err)
+	}
+
+	sort.Strings(packages)
+	for _, pkg := range packages {
+		fmt.Println("apt", pkg)
+	}
 
 	return nil
 }
