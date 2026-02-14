@@ -36,6 +36,18 @@ func runDump(cmd *cobra.Command, args []string) error {
 		fmt.Println("apt", pkg)
 	}
 
+	// Emit custom repositories (PPAs and deb) from sources.list and sources.list.d
+	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
+	if err != nil {
+		return fmt.Errorf("failed to list custom sources: %w", err)
+	}
+	if len(sources) > 0 {
+		fmt.Println()
+		for _, e := range sources {
+			fmt.Println(e.AptfileLine)
+		}
+	}
+
 	return nil
 }
 
