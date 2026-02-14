@@ -2,6 +2,7 @@ package apt
 
 import (
 	"fmt"
+	"strings"
 )
 
 // IsPackageInstalled checks if a package is installed on the system
@@ -61,6 +62,15 @@ func AutoRemove() error {
 
 	fmt.Println("✓ Orphaned dependencies removed")
 	return nil
+}
+
+// GetInstalledVersion returns the installed version of a package, or empty string if not installed
+func GetInstalledVersion(packageName string) (string, error) {
+	output, err := runCommandWithOutput("dpkg-query", "-W", "-f=${Version}", packageName)
+	if err != nil {
+		return "", nil
+	}
+	return strings.TrimSpace(string(output)), nil
 }
 
 // GetAllInstalledPackages returns a list of all manually installed packages

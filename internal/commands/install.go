@@ -2,6 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"sort"
+	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -9,7 +12,9 @@ import (
 )
 
 var (
-	noUpdate bool
+	noUpdate   bool
+	installLock bool
+	installLocked bool
 )
 
 var installCmd = &cobra.Command{
@@ -24,6 +29,8 @@ var installCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
+	installCmd.Flags().BoolVar(&installLock, "lock", false, "After install, write Aptfile.lock with current package versions")
+	installCmd.Flags().BoolVar(&installLocked, "locked", false, "Install only versions from Aptfile.lock (fail if lock missing)")
 	rootCmd.AddCommand(installCmd)
 	rootCmd.RunE = runInstall
 }
@@ -86,24 +93,36 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	packagesToInstall := []string{}
-	for _, entry := range entries {
-		if entry.Type == aptfile.EntryTypeApt {
-			packagesToInstall = append(packagesToInstall, entry.Value)
+	if installLocked {
+		specs, err := ReadLockFile()
+		if err != nil {
+			return err
+		}
+		packagesToInstall = specs
+	} else {
+		for _, entry := range entries {
+			if entry.Type == aptfile.EntryTypeApt {
+				packagesToInstall = append(packagesToInstall, entry.Value)
+			}
 		}
 	}
 
 	if len(packagesToInstall) > 0 {
 		fmt.Printf("Installing %d packages...\n", len(packagesToInstall))
 		for _, pkg := range packagesToInstall {
-			installed, err := apt.IsPackageInstalled(pkg)
+			pkgName := pkg
+			if idx := strings.Index(pkg, "="); idx > 0 {
+				pkgName = pkg[:idx]
+			}
+			installed, err := apt.IsPackageInstalled(pkgName)
 			if err != nil {
-				fmt.Printf("Warning: Could not check if %s is installed: %v\n", pkg, err)
+				fmt.Printf("Warning: Could not check if %s is installed: %v\n", pkgName, err)
 			}
 			if installed {
-				fmt.Printf("✓ Package %s is already installed\n", pkg)
+				fmt.Printf("✓ Package %s is already installed\n", pkgName)
 				// Track the package in state even if already installed
 				// (user may have installed it manually before using apt-bundle)
-				state.AddPackage(pkg)
+				state.AddPackage(pkgName)
 				continue
 			}
 
@@ -112,7 +131,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			}
 
 			// Track successfully installed package in state
-			state.AddPackage(pkg)
+			state.AddPackage(pkgName)
 		}
 		fmt.Println("✓ All packages installed successfully")
 	} else {
@@ -124,5 +143,40 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
+	if installLock && len(packagesToInstall) > 0 {
+		if err := writeLockFileFromPackages(packagesToInstall); err != nil {
+			return fmt.Errorf("failed to write lock file: %w", err)
+		}
+	}
+
 	return nil
+}
+
+func writeLockFileFromPackages(packages []string) error {
+	type pkgVer struct {
+		pkg string
+		ver string
+	}
+	var locked []pkgVer
+	for _, pkg := range packages {
+		pkgName := pkg
+		if idx := strings.Index(pkg, "="); idx > 0 {
+			pkgName = pkg[:idx]
+		}
+		ver, err := apt.GetInstalledVersion(pkgName)
+		if err != nil || ver == "" {
+			continue
+		}
+		locked = append(locked, pkgVer{pkg: pkgName, ver: ver})
+	}
+	if len(locked) == 0 {
+		return nil
+	}
+	sort.Slice(locked, func(i, j int) bool { return locked[i].pkg < locked[j].pkg })
+	path := getLockFilePath()
+	var lines []string
+	for _, pv := range locked {
+		lines = append(lines, pv.pkg+"="+pv.ver)
+	}
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
 }
