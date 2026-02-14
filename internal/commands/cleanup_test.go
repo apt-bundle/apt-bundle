@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
+	"github.com/apt-bundle/apt-bundle/internal/testutil"
 )
 
 func TestCleanupCmd(t *testing.T) {
@@ -55,7 +56,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
+		mock := testutil.NewMockExecutor()
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
@@ -99,7 +100,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
+		mock := testutil.NewMockExecutor()
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
@@ -147,7 +148,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 		}
 
 		// Verify no apt-get remove was called (dry-run)
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 2 && call[0] == "apt-get" && call[1] == "remove" {
 				t.Error("apt-get remove should not be called in dry-run mode")
 			}
@@ -158,8 +159,8 @@ func TestRunCleanupWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
 		apt.SetExecutor(mock)
@@ -210,7 +211,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 
 		// Verify apt-get remove was called
 		removeCalled := false
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 3 && call[0] == "apt-get" && call[1] == "remove" && call[3] == "git" {
 				removeCalled = true
 				break
@@ -234,8 +235,8 @@ func TestRunCleanupWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
 		apt.SetExecutor(mock)
@@ -285,7 +286,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 
 		// Verify apt-get autoremove was called
 		autoremoveCalled := false
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 2 && call[0] == "apt-get" && call[1] == "autoremove" {
 				autoremoveCalled = true
 				break
@@ -409,8 +410,8 @@ func TestGetPackagesToCleanup(t *testing.T) {
 }
 
 func TestGetPackagesToZap(t *testing.T) {
-	mock := newMockExecutor()
-	mock.outputFunc = func(name string, args ...string) ([]byte, error) {
+	mock := testutil.NewMockExecutor()
+	mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 		if name == "apt-mark" && len(args) > 0 && args[0] == "showmanual" {
 			return []byte("vim\ncurl\ngit\nhtop\n"), nil
 		}
