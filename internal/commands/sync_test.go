@@ -32,7 +32,45 @@ func TestSyncCmd(t *testing.T) {
 		} else if autoremoveFlag.DefValue != "false" {
 			t.Errorf("--autoremove default = %v, want 'false'", autoremoveFlag.DefValue)
 		}
+		if syncCmd.Flags().Lookup("dry-run") == nil {
+			t.Error("--dry-run flag not found")
+		}
 	})
+}
+
+func TestRunSyncDryRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "Aptfile")
+	if err := os.WriteFile(tmpFile, []byte("apt curl\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	origPath := aptfilePath
+	aptfilePath = tmpFile
+	defer func() { aptfilePath = origPath }()
+
+	apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
+	defer apt.ResetStatePath()
+
+	mock := testutil.NewMockExecutor()
+	mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+		if name == "dpkg-query" {
+			return nil, errors.New("not installed")
+		}
+		return nil, errors.New("unexpected")
+	}
+	apt.SetExecutor(mock)
+	defer apt.ResetExecutor()
+
+	syncDryRun = true
+	defer func() { syncDryRun = false }()
+
+	err := runSync(syncCmd, nil)
+	if err != nil {
+		t.Fatalf("runSync dry-run: %v", err)
+	}
+	if len(mock.RunCalls) != 0 {
+		t.Errorf("sync dry-run should not run apt/install/cleanup; got %d Run calls", len(mock.RunCalls))
+	}
 }
 
 func TestRunSyncWithMock(t *testing.T) {

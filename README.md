@@ -99,8 +99,13 @@ sudo apt-bundle --file /path/to/Aptfile
 # Skip updating package lists (useful in CI/CD)
 sudo apt-bundle --no-update
 
+# See what would be installed/added without making changes
+sudo apt-bundle install --dry-run
+
 # Make system match Aptfile (install missing, remove no-longer-listed)
 sudo apt-bundle sync
+# See what would be installed/removed without making changes
+sudo apt-bundle sync --dry-run
 
 # Check if packages/repos/keys from Aptfile are present (exit 0 only if all present)
 apt-bundle check

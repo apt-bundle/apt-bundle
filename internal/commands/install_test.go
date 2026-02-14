@@ -125,6 +125,40 @@ func setupMockRoot() func() {
 	}
 }
 
+func TestRunInstallDryRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "Aptfile")
+	if err := os.WriteFile(tmpFile, []byte("apt curl\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	origPath := aptfilePath
+	aptfilePath = tmpFile
+	defer func() { aptfilePath = origPath }()
+
+	mock := testutil.NewMockExecutor()
+	mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+		if name == "dpkg-query" {
+			return nil, errors.New("not installed")
+		}
+		return nil, errors.New("unexpected")
+	}
+	apt.SetExecutor(mock)
+	defer apt.ResetExecutor()
+
+	installDryRun = true
+	defer func() { installDryRun = false }()
+	SetGetEuid(func() int { return 0 })
+	defer ResetGetEuid()
+
+	err := runInstall(installCmd, nil)
+	if err != nil {
+		t.Fatalf("runInstall dry-run: %v", err)
+	}
+	if len(mock.RunCalls) != 0 {
+		t.Errorf("dry-run should not run any commands (apt-get, add-apt-repository, etc.); got %d Run calls", len(mock.RunCalls))
+	}
+}
+
 func TestRunInstallWithMock(t *testing.T) {
 	t.Run("nonexistent aptfile", func(t *testing.T) {
 		cleanup := setupMockRoot()

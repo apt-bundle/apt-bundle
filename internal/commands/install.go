@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	noUpdate   bool
-	installLock bool
+	noUpdate      bool
+	installLock   bool
 	installLocked bool
+	installDryRun bool
 )
 
 var installCmd = &cobra.Command{
@@ -31,13 +32,16 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
 	installCmd.Flags().BoolVar(&installLock, "lock", false, "After install, write Aptfile.lock with current package versions")
 	installCmd.Flags().BoolVar(&installLocked, "locked", false, "Install only versions from Aptfile.lock (fail if lock missing)")
+	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Only report what would be installed/added; do not run apt or change state")
 	rootCmd.AddCommand(installCmd)
 	rootCmd.RunE = runInstall
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	if err := checkRoot(); err != nil {
-		return err
+	if !installDryRun {
+		if err := checkRoot(); err != nil {
+			return err
+		}
 	}
 
 	fmt.Printf("Reading Aptfile from: %s\n", aptfilePath)
@@ -48,6 +52,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Found %d entries in Aptfile\n", len(entries))
+
+	if installDryRun {
+		return runInstallDryRun(entries)
+	}
 
 	state, err := apt.LoadState()
 	if err != nil {
@@ -179,4 +187,64 @@ func writeLockFileFromPackages(packages []string) error {
 		lines = append(lines, pv.pkg+"="+pv.ver)
 	}
 	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+}
+
+func runInstallDryRun(entries []aptfile.Entry) error {
+	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
+	if err != nil {
+		return fmt.Errorf("failed to list sources: %w", err)
+	}
+	sourceLines := make(map[string]bool)
+	for _, e := range sources {
+		sourceLines[e.AptfileLine] = true
+	}
+
+	var wouldAddKeys, wouldAddRepos, wouldInstall []string
+	for _, entry := range entries {
+		switch entry.Type {
+		case aptfile.EntryTypeKey:
+			keyPath := apt.KeyPathForURL(entry.Value)
+			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+				wouldAddKeys = append(wouldAddKeys, entry.Value)
+			}
+		case aptfile.EntryTypePPA:
+			line := "ppa " + entry.Value
+			if !sourceLines[line] {
+				wouldAddRepos = append(wouldAddRepos, line)
+			}
+		case aptfile.EntryTypeDeb:
+			line := "deb " + entry.Value
+			if !sourceLines[line] {
+				wouldAddRepos = append(wouldAddRepos, line)
+			}
+		case aptfile.EntryTypeApt:
+			pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+			installed, _ := apt.IsPackageInstalled(pkgName)
+			if !installed {
+				wouldInstall = append(wouldInstall, entry.Value)
+			}
+		}
+	}
+
+	fmt.Println("--- dry-run: would perform the following ---")
+	if len(wouldAddKeys) > 0 {
+		for _, u := range wouldAddKeys {
+			fmt.Printf("Would add key: %s\n", u)
+		}
+	}
+	if len(wouldAddRepos) > 0 {
+		for _, r := range wouldAddRepos {
+			fmt.Printf("Would add repository: %s\n", r)
+		}
+	}
+	if len(wouldInstall) > 0 {
+		fmt.Printf("Would run apt-get update (if repos added)\n")
+		for _, p := range wouldInstall {
+			fmt.Printf("Would install: %s\n", p)
+		}
+	}
+	if len(wouldAddKeys) == 0 && len(wouldAddRepos) == 0 && len(wouldInstall) == 0 {
+		fmt.Println("Nothing to do; all entries already present.")
+	}
+	return nil
 }
