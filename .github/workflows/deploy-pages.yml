@@ -8,6 +8,8 @@ on:
       - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
       - '!.cursor/**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -44,11 +46,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/latest" | \
-            jq -r '.tag_name' | sed 's/^v//')
+          # When triggered by release event, use the published release tag directly
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          else
+            VERSION=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" | \
+              jq -r '.tag_name // empty' | sed 's/^v//')
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "Warning: Could not determine release version, using 'latest'"
+            VERSION="latest"
+          fi
           mkdir -p docs/_data
-          echo "apt_repo_version: $VERSION" > docs/_data/version.yml
+          echo "apt_repo_version: \"$VERSION\"" > docs/_data/version.yml
+          echo "Using version: $VERSION"
 
       - name: Build with Jekyll
         run: |
