@@ -25,7 +25,6 @@ var httpGet = http.Get
 func AddGPGKey(keyURL string) (string, error) {
 	fmt.Printf("Adding GPG key from: %s\n", keyURL)
 
-	// Generate filename from URL hash
 	hash := sha256.Sum256([]byte(keyURL))
 	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
 	keyPath := filepath.Join(KeyringDir, filename)

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
+	"github.com/apt-bundle/apt-bundle/internal/testutil"
 )
 
 func TestInstallCmd(t *testing.T) {
@@ -25,7 +26,6 @@ func TestInstallCmd(t *testing.T) {
 	})
 
 	t.Run("install is default command", func(t *testing.T) {
-		// Check that rootCmd has a RunE function (install as default)
 		if rootCmd.RunE == nil {
 			t.Error("rootCmd.RunE should be set to make install the default command")
 		}
@@ -34,12 +34,10 @@ func TestInstallCmd(t *testing.T) {
 
 func TestRunInstall(t *testing.T) {
 	t.Run("without root privileges", func(t *testing.T) {
-		// Skip if running as root
 		if os.Geteuid() == 0 {
 			t.Skip("Skipping test - running as root")
 		}
 
-		// Create a temporary Aptfile
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\n"
@@ -48,7 +46,6 @@ func TestRunInstall(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile
@@ -60,12 +57,10 @@ func TestRunInstall(t *testing.T) {
 	})
 
 	t.Run("with nonexistent aptfile as root", func(t *testing.T) {
-		// Only run if we're root
 		if os.Geteuid() != 0 {
 			t.Skip("Skipping test - requires root privileges")
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = "/nonexistent/path/Aptfile"
@@ -77,12 +72,10 @@ func TestRunInstall(t *testing.T) {
 	})
 
 	t.Run("with invalid aptfile as root", func(t *testing.T) {
-		// Only run if we're root
 		if os.Geteuid() != 0 {
 			t.Skip("Skipping test - requires root privileges")
 		}
 
-		// Create a temporary Aptfile with invalid content
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "invalid-directive value\n"
@@ -91,7 +84,6 @@ func TestRunInstall(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile
@@ -103,12 +95,10 @@ func TestRunInstall(t *testing.T) {
 	})
 
 	t.Run("with valid aptfile as root", func(t *testing.T) {
-		// Only run if we're root
 		if os.Geteuid() != 0 {
 			t.Skip("Skipping test - requires root privileges")
 		}
 
-		// Create a temporary Aptfile
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\napt git\n"
@@ -117,7 +107,6 @@ func TestRunInstall(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile
@@ -129,44 +118,8 @@ func TestRunInstall(t *testing.T) {
 	})
 }
 
-// Mock-based tests for reliable unit testing without root privileges
-
-// mockExecutor implements apt.CommandExecutor for testing
-type mockExecutor struct {
-	runFunc     func(name string, args ...string) error
-	outputFunc  func(name string, args ...string) ([]byte, error)
-	runCalls    [][]string
-	outputCalls [][]string
-}
-
-func newMockExecutor() *mockExecutor {
-	return &mockExecutor{
-		runCalls:    [][]string{},
-		outputCalls: [][]string{},
-	}
-}
-
-func (m *mockExecutor) Run(name string, args ...string) error {
-	call := append([]string{name}, args...)
-	m.runCalls = append(m.runCalls, call)
-	if m.runFunc != nil {
-		return m.runFunc(name, args...)
-	}
-	return nil
-}
-
-func (m *mockExecutor) Output(name string, args ...string) ([]byte, error) {
-	call := append([]string{name}, args...)
-	m.outputCalls = append(m.outputCalls, call)
-	if m.outputFunc != nil {
-		return m.outputFunc(name, args...)
-	}
-	return nil, nil
-}
-
-// setupMockRoot sets up the mock to bypass root check
 func setupMockRoot() func() {
-	SetGetEuid(func() int { return 0 }) // Pretend we're root
+	SetGetEuid(func() int { return 0 })
 	return func() {
 		ResetGetEuid()
 	}
@@ -215,19 +168,17 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
+		mock := testutil.NewMockExecutor()
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
 		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
 		defer apt.ResetStatePath()
 
-		// Save and restore noUpdate flag
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
-		noUpdate = true // Skip apt-get update
+		noUpdate = true
 
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "# Just a comment\n"
@@ -250,23 +201,20 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		mock.outputFunc = func(name string, args ...string) ([]byte, error) {
-			// Simulate package not installed
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
 		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
 		defer apt.ResetStatePath()
 
-		// Enable update
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
 		noUpdate = false
@@ -287,9 +235,8 @@ func TestRunInstallWithMock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		// Verify apt-get update was called
 		updateCalled := false
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 2 && call[0] == "apt-get" && call[1] == "update" {
 				updateCalled = true
 				break
@@ -304,22 +251,20 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		mock.outputFunc = func(name string, args ...string) ([]byte, error) {
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
 		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
 		defer apt.ResetStatePath()
 
-		// Disable update
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
 		noUpdate = true
@@ -340,8 +285,7 @@ func TestRunInstallWithMock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		// Verify apt-get update was NOT called
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 2 && call[0] == "apt-get" && call[1] == "update" {
 				t.Error("apt-get update should not be called with --no-update")
 			}
@@ -352,12 +296,11 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		mock.outputFunc = func(name string, args ...string) ([]byte, error) {
-			// Simulate package is installed
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return []byte("install ok installed"), nil
 		}
 		apt.SetExecutor(mock)
@@ -388,8 +331,7 @@ func TestRunInstallWithMock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		// Verify apt-get install was NOT called (package already installed)
-		for _, call := range mock.runCalls {
+		for _, call := range mock.RunCalls {
 			if len(call) >= 2 && call[0] == "apt-get" && call[1] == "install" {
 				t.Error("apt-get install should not be called for already installed package")
 			}
@@ -400,8 +342,8 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			if name == "apt-get" && len(args) > 0 && args[0] == "update" {
 				return errors.New("E: Could not get lock")
 			}
@@ -440,14 +382,14 @@ func TestRunInstallWithMock(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			if name == "apt-get" && len(args) > 0 && args[0] == "install" {
 				return errors.New("E: Unable to locate package")
 			}
 			return nil
 		}
-		mock.outputFunc = func(name string, args ...string) ([]byte, error) {
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
 		apt.SetExecutor(mock)
@@ -484,13 +426,12 @@ func TestRunInstallWithMock(t *testing.T) {
 		defer cleanup()
 
 		checkCalls := 0
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		mock.outputFunc = func(name string, args ...string) ([]byte, error) {
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			checkCalls++
-			// Return error (not installed) but the code should continue
 			return nil, errors.New("dpkg-query failed")
 		}
 		apt.SetExecutor(mock)
@@ -521,7 +462,6 @@ func TestRunInstallWithMock(t *testing.T) {
 			t.Errorf("Expected no error (warning only), got %v", err)
 		}
 
-		// Verify IsPackageInstalled was called
 		if checkCalls == 0 {
 			t.Error("Expected IsPackageInstalled to be called")
 		}

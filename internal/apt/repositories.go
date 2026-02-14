@@ -61,7 +61,6 @@ type DebRepository struct {
 func AddDebRepository(repoLine string, keyPath string) (string, error) {
 	fmt.Printf("Adding deb repository: %s\n", repoLine)
 
-	// Parse the repository line
 	repo, err := parseDebLine(repoLine)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse deb line: %w", err)

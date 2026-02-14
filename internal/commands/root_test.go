@@ -6,17 +6,12 @@ import (
 )
 
 func TestExecute(t *testing.T) {
-	// Save original args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
 	t.Run("help flag", func(t *testing.T) {
-		// Test that the Execute function can be called
-		// We'll test with --help to avoid requiring actual execution
 		os.Args = []string{"apt-bundle", "--help"}
 		err := Execute()
-		// --help causes cobra to print help and return nil or a specific error
-		// Either is acceptable
 		if err != nil {
 			t.Logf("Execute() with --help returned: %v", err)
 		}
@@ -67,7 +62,6 @@ func TestRootCmd(t *testing.T) {
 			t.Error("rootCmd has no subcommands")
 		}
 
-		// Check for expected subcommands
 		cmdNames := make(map[string]bool)
 		for _, cmd := range commands {
 			cmdNames[cmd.Name()] = true
@@ -85,17 +79,13 @@ func TestRootCmd(t *testing.T) {
 func TestCheckRoot(t *testing.T) {
 	t.Run("check root privileges", func(t *testing.T) {
 		err := checkRoot()
-
-		// Get current effective UID
 		euid := os.Geteuid()
 
 		if euid == 0 {
-			// Running as root - should not error
 			if err != nil {
 				t.Errorf("checkRoot() returned error when running as root: %v", err)
 			}
 		} else {
-			// Not running as root - should error
 			if err == nil {
 				t.Error("checkRoot() should return error when not running as root")
 			}
@@ -105,11 +95,9 @@ func TestCheckRoot(t *testing.T) {
 
 func TestGlobalVariables(t *testing.T) {
 	t.Run("aptfilePath variable", func(t *testing.T) {
-		// Save original value
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 
-		// Test that we can modify the variable
 		testPath := "/custom/path/Aptfile"
 		aptfilePath = testPath
 
@@ -118,8 +106,6 @@ func TestGlobalVariables(t *testing.T) {
 		}
 	})
 }
-
-// Mock-based tests for checkRoot
 
 func TestCheckRootWithMock(t *testing.T) {
 	defer ResetGetEuid()
@@ -158,14 +144,9 @@ func TestSetGetEuid(t *testing.T) {
 }
 
 func TestResetGetEuid(t *testing.T) {
-	// Set a custom getEuid
 	SetGetEuid(func() int { return 42 })
-
-	// Reset it
 	ResetGetEuid()
 
-	// After reset, getEuid should return the real euid
-	// We can't easily verify the exact value, but we can verify it's callable
 	result := getEuid()
 	if result != os.Geteuid() {
 		t.Errorf("Expected real euid %d, got %d", os.Geteuid(), result)

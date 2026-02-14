@@ -25,19 +25,16 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
 	rootCmd.AddCommand(installCmd)
-	// Make install the default command
 	rootCmd.RunE = runInstall
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	// Check for root privileges
 	if err := checkRoot(); err != nil {
 		return err
 	}
 
 	fmt.Printf("Reading Aptfile from: %s\n", aptfilePath)
 
-	// Parse the Aptfile
 	entries, err := aptfile.Parse(aptfilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse Aptfile: %w", err)
@@ -45,20 +42,17 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Found %d entries in Aptfile\n", len(entries))
 
-	// Load the state to track managed packages
 	state, err := apt.LoadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	// Process entries in order, linking keys to subsequent deb directives
 	var pendingKeyPath string
 	var reposAdded bool
 
 	for _, entry := range entries {
 		switch entry.Type {
 		case aptfile.EntryTypeKey:
-			// Add the GPG key and store the path for the next deb directive
 			keyPath, err := apt.AddGPGKey(entry.Value)
 			if err != nil {
 				return fmt.Errorf("failed to add GPG key: %w", err)
@@ -67,25 +61,22 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			state.AddKey(keyPath)
 
 		case aptfile.EntryTypePPA:
-			// Add PPA repository
 			if err := apt.AddPPA(entry.Value); err != nil {
 				return fmt.Errorf("failed to add PPA: %w", err)
 			}
 			reposAdded = true
 
 		case aptfile.EntryTypeDeb:
-			// Add deb repository with the pending key (if any)
 			sourcePath, err := apt.AddDebRepository(entry.Value, pendingKeyPath)
 			if err != nil {
 				return fmt.Errorf("failed to add repository: %w", err)
 			}
 			state.AddRepository(sourcePath)
-			pendingKeyPath = "" // Clear the pending key after use
+			pendingKeyPath = ""
 			reposAdded = true
 		}
 	}
 
-	// Run apt-get update if repositories were added or if not skipped
 	if reposAdded || !noUpdate {
 		if !noUpdate {
 			if err := apt.Update(); err != nil {
@@ -94,7 +85,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Process all 'apt' directives to install packages
 	packagesToInstall := []string{}
 	for _, entry := range entries {
 		if entry.Type == aptfile.EntryTypeApt {
@@ -105,7 +95,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if len(packagesToInstall) > 0 {
 		fmt.Printf("Installing %d packages...\n", len(packagesToInstall))
 		for _, pkg := range packagesToInstall {
-			// Check if already installed
 			installed, err := apt.IsPackageInstalled(pkg)
 			if err != nil {
 				fmt.Printf("Warning: Could not check if %s is installed: %v\n", pkg, err)
@@ -118,7 +107,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				continue
 			}
 
-			// Install the package
 			if err := apt.InstallPackage(pkg); err != nil {
 				return fmt.Errorf("failed to install package %s: %w", pkg, err)
 			}

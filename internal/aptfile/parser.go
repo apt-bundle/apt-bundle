@@ -39,20 +39,14 @@ func Parse(filePath string) ([]Entry, error) {
 		line := scanner.Text()
 		original := line
 
-		// Trim whitespace
 		line = strings.TrimSpace(line)
-
-		// Skip empty lines
 		if line == "" {
 			continue
 		}
-
-		// Skip comments
 		if strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		// Parse the line
 		entry, err := parseLine(line, lineNum, original)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNum, err)
@@ -69,7 +63,6 @@ func Parse(filePath string) ([]Entry, error) {
 }
 
 func parseLine(line string, lineNum int, original string) (Entry, error) {
-	// Split by whitespace, respecting quotes
 	parts := splitRespectingQuotes(line)
 	if len(parts) < 2 {
 		return Entry{}, fmt.Errorf("invalid line format: expected 'directive argument'")

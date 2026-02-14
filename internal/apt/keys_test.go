@@ -10,22 +10,14 @@ import (
 )
 
 func TestAddGPGKey(t *testing.T) {
-	// Setup mock HTTP client and temp directory
 	tmpDir := t.TempDir()
-
-	// Override keyring directory for testing
-	originalKeyringDir := KeyringDir
-	defer func() {
-		// We can't actually override the const, so we'll use temp paths in tests
-	}()
-	_ = originalKeyringDir
+	_ = tmpDir
 
 	t.Run("successful key download - binary key", func(t *testing.T) {
 		defer ResetHTTPGet()
 		defer ResetExecutor()
 
-		// Mock HTTP response with binary key data
-		binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04} // Fake GPG binary header
+		binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04}
 		SetHTTPGet(func(url string) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -33,15 +25,11 @@ func TestAddGPGKey(t *testing.T) {
 			}, nil
 		})
 
-		// Create a temp keyring directory
 		keyringPath := filepath.Join(tmpDir, "keyrings")
 		os.MkdirAll(keyringPath, 0755)
 
-		// Note: In real implementation, we'd need to override KeyringDir
-		// For now, this test verifies the function doesn't panic
 		keyPath, err := AddGPGKey("https://example.com/key.gpg")
 		if err != nil {
-			// Expected to fail without proper keyring dir permissions
 			t.Logf("AddGPGKey failed (expected in test environment): %v", err)
 		} else {
 			t.Logf("Key path: %s", keyPath)
@@ -64,6 +52,20 @@ func TestAddGPGKey(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "HTTP 404") {
 			t.Errorf("Expected HTTP 404 error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid URL format", func(t *testing.T) {
+		_, err := AddGPGKey("not-a-valid-url")
+		if err != nil {
+			t.Logf("AddGPGKey() with invalid URL returned error: %v", err)
+		}
+	})
+
+	t.Run("keyserver URL", func(t *testing.T) {
+		_, err := AddGPGKey("keyserver://keyserver.ubuntu.com/12345")
+		if err != nil {
+			t.Logf("AddGPGKey() with keyserver URL returned error: %v", err)
 		}
 	})
 }
@@ -128,5 +130,12 @@ func TestSetHTTPGet(t *testing.T) {
 	httpGet("http://example.com")
 	if !customCalled {
 		t.Error("Custom httpGet function was not called")
+	}
+}
+
+func BenchmarkAddGPGKey(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddGPGKey("https://example.com/key.gpg")
 	}
 }

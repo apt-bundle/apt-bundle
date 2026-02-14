@@ -24,7 +24,6 @@ func TestCheckCmd(t *testing.T) {
 
 func TestRunCheck(t *testing.T) {
 	t.Run("with valid aptfile", func(t *testing.T) {
-		// Create a temporary Aptfile
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\napt git\n"
@@ -33,7 +32,6 @@ func TestRunCheck(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile
@@ -45,7 +43,6 @@ func TestRunCheck(t *testing.T) {
 	})
 
 	t.Run("with nonexistent aptfile", func(t *testing.T) {
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = "/nonexistent/path/Aptfile"
@@ -57,7 +54,6 @@ func TestRunCheck(t *testing.T) {
 	})
 
 	t.Run("with invalid aptfile", func(t *testing.T) {
-		// Create a temporary Aptfile with invalid content
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "invalid-directive value\n"
@@ -66,7 +62,6 @@ func TestRunCheck(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile
@@ -78,7 +73,6 @@ func TestRunCheck(t *testing.T) {
 	})
 
 	t.Run("with empty aptfile", func(t *testing.T) {
-		// Create an empty temporary Aptfile
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 
@@ -86,7 +80,6 @@ func TestRunCheck(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		// Save and restore original aptfilePath
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
 		aptfilePath = tmpFile

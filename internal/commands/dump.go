@@ -24,10 +24,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	fmt.Println("# Generated on:", getCurrentTime())
 	fmt.Println()
 
-	// TODO: Implement the actual dump logic
-	// 1. Query manually installed packages using apt-mark
-	// 2. List custom repositories from /etc/apt/sources.list.d/
-	// 3. Format and output as Aptfile directives
+	// TODO: Query apt-mark, list sources, format as Aptfile directives
 
 	return nil
 }

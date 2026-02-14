@@ -7,21 +7,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/apt-bundle/apt-bundle/internal/testutil"
 )
 
 func TestAddPPA(t *testing.T) {
 	t.Run("add-apt-repository not available", func(t *testing.T) {
-		// Test with a PPA when add-apt-repository might not be available
-		// The function should check for the command's existence
 		err := AddPPA("ppa:deadsnakes/ppa")
 
-		// If add-apt-repository is not found, we should get a specific error
 		if err != nil {
 			if _, lookupErr := exec.LookPath("add-apt-repository"); lookupErr != nil {
-				// Expected: add-apt-repository not found
 				return
 			}
-			// If add-apt-repository exists, error is likely due to permissions
 			t.Logf("AddPPA failed (likely due to permissions): %v", err)
 		}
 	})
@@ -32,7 +29,6 @@ func TestAddPPA(t *testing.T) {
 		}
 
 		err := AddPPA("")
-		// Should handle empty PPA gracefully
 		if err == nil {
 			t.Log("Warning: AddPPA('') succeeded unexpectedly")
 		}
@@ -44,7 +40,6 @@ func TestAddPPA(t *testing.T) {
 		}
 
 		err := AddPPA("invalid-ppa-format")
-		// The command should fail or handle invalid format
 		if err == nil {
 			t.Log("Warning: AddPPA with invalid format succeeded unexpectedly")
 		}
@@ -56,7 +51,6 @@ func TestAddPPA(t *testing.T) {
 		}
 
 		err := AddPPA("ppa:deadsnakes/ppa")
-		// Expected to fail without sudo, but function should be callable
 		if err == nil {
 			t.Log("Warning: AddPPA succeeded unexpectedly (might have sudo)")
 		}
@@ -195,9 +189,6 @@ Signed-By: /etc/apt/keyrings/docker.gpg
 func TestAddDebRepository(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// We can't easily override SourcesDir constant, so these tests
-	// verify the parsing logic rather than actual file writing
-
 	t.Run("parse and format Docker repository", func(t *testing.T) {
 		repoLine := "[arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 		keyPath := filepath.Join(tmpDir, "docker.gpg")
@@ -242,8 +233,6 @@ func TestRemoveDebRepository(t *testing.T) {
 	})
 }
 
-// Mock-based tests for reliable unit testing without system dependencies
-
 func TestAddPPAWithMock(t *testing.T) {
 	defer ResetExecutor()
 	defer ResetLookPath()
@@ -267,8 +256,8 @@ func TestAddPPAWithMock(t *testing.T) {
 			return "/usr/bin/add-apt-repository", nil
 		})
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
 		SetExecutor(mock)
@@ -278,14 +267,13 @@ func TestAddPPAWithMock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		// Verify correct command was called
-		if len(mock.runCalls) != 1 {
-			t.Errorf("Expected 1 run call, got %d", len(mock.runCalls))
+		if len(mock.RunCalls) != 1 {
+			t.Errorf("Expected 1 run call, got %d", len(mock.RunCalls))
 		}
 		expectedArgs := []string{"add-apt-repository", "-y", "ppa:deadsnakes/ppa"}
 		for i, arg := range expectedArgs {
-			if mock.runCalls[0][i] != arg {
-				t.Errorf("Arg %d: expected %s, got %s", i, arg, mock.runCalls[0][i])
+			if mock.RunCalls[0][i] != arg {
+				t.Errorf("Arg %d: expected %s, got %s", i, arg, mock.RunCalls[0][i])
 			}
 		}
 	})
@@ -295,8 +283,8 @@ func TestAddPPAWithMock(t *testing.T) {
 			return "/usr/bin/add-apt-repository", nil
 		})
 
-		mock := newMockExecutor()
-		mock.runFunc = func(name string, args ...string) error {
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
 			return errors.New("E: The repository 'ppa:invalid/ppa' does not have a Release file")
 		}
 		SetExecutor(mock)
@@ -318,7 +306,7 @@ func TestAddPPAWithMock(t *testing.T) {
 			return "/usr/bin/add-apt-repository", nil
 		})
 
-		mock := newMockExecutor()
+		mock := testutil.NewMockExecutor()
 		SetExecutor(mock)
 
 		_ = AddPPA("ppa:test/ppa")
@@ -347,15 +335,20 @@ func TestSetLookPath(t *testing.T) {
 }
 
 func TestResetLookPath(t *testing.T) {
-	// Set a custom lookPath
 	SetLookPath(func(file string) (string, error) {
 		return "/custom/path", nil
 	})
-
-	// Reset it
 	ResetLookPath()
-
-	// After reset, lookPath should behave like exec.LookPath
-	// We can't easily verify this without side effects, but we can verify it doesn't panic
 	_, _ = lookPath("ls")
+}
+
+func BenchmarkAddPPA(b *testing.B) {
+	if _, err := exec.LookPath("add-apt-repository"); err != nil {
+		b.Skip("add-apt-repository not available, skipping benchmark")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddPPA("ppa:test/ppa")
+	}
 }

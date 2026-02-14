@@ -96,7 +96,6 @@ deb "http://example.com/repo main"`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a temporary file
 			tmpDir := t.TempDir()
 			tmpFile := filepath.Join(tmpDir, "Aptfile")
 
@@ -312,7 +311,6 @@ func TestUnquote(t *testing.T) {
 }
 
 func TestEntryTypes(t *testing.T) {
-	// Test that entry types are defined correctly
 	tests := []struct {
 		entryType EntryType
 		want      string
@@ -333,7 +331,6 @@ func TestEntryTypes(t *testing.T) {
 }
 
 func TestEntry(t *testing.T) {
-	// Test Entry struct creation and field access
 	entry := Entry{
 		Type:     EntryTypeApt,
 		Value:    "curl",
@@ -356,16 +353,12 @@ func TestEntry(t *testing.T) {
 }
 
 func TestParseScannerError(t *testing.T) {
-	// Test that Parse handles scanner errors (e.g., line too long)
-	// The default bufio.Scanner buffer is 64KB, so we create a line longer than that
 	t.Run("line too long triggers scanner error", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 
-		// Create a very long line (> 64KB) to trigger bufio.ErrTooLong
-		longLine := "apt " + string(make([]byte, 70000)) // Fill with null bytes but starts with valid directive
+		longLine := "apt " + string(make([]byte, 70000))
 
-		// Write the file
 		if err := os.WriteFile(tmpFile, []byte(longLine), 0644); err != nil {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}

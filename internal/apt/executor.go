@@ -3,14 +3,13 @@ package apt
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/apt-bundle/apt-bundle/internal/executor"
 )
 
-type CommandExecutor interface {
-	Run(name string, args ...string) error
-	Output(name string, args ...string) ([]byte, error)
-}
-
 type realExecutor struct{}
+
+var _ executor.Executor = (*realExecutor)(nil)
 
 func (e *realExecutor) Run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
@@ -24,7 +23,7 @@ func (e *realExecutor) Output(name string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
-var defaultExecutor CommandExecutor = &realExecutor{}
+var defaultExecutor executor.Executor = &realExecutor{}
 
 func runCommand(name string, args ...string) error {
 	return defaultExecutor.Run(name, args...)
@@ -35,14 +34,17 @@ func runCommandWithOutput(name string, args ...string) ([]byte, error) {
 }
 
 func wrapCommandError(err error, operation, target string) error {
-	if err != nil {
-		return fmt.Errorf("failed to %s %s: %w", operation, target, err)
+	if err == nil {
+		return nil
 	}
-	return nil
+	if target == "" {
+		return fmt.Errorf("failed to %s: %w", operation, err)
+	}
+	return fmt.Errorf("failed to %s %s: %w", operation, target, err)
 }
 
 // SetExecutor sets the command executor (for testing only)
-func SetExecutor(e CommandExecutor) {
+func SetExecutor(e executor.Executor) {
 	defaultExecutor = e
 }
 

@@ -29,7 +29,6 @@ func TestRunDump(t *testing.T) {
 	})
 
 	t.Run("with args", func(t *testing.T) {
-		// Test that runDump handles arguments gracefully
 		err := runDump(dumpCmd, []string{"arg1", "arg2"})
 		if err != nil {
 			t.Errorf("runDump() with args returned error: %v", err)
@@ -46,7 +45,6 @@ func TestGetCurrentTime(t *testing.T) {
 	})
 
 	t.Run("consistent output", func(t *testing.T) {
-		// Call it multiple times to ensure it doesn't panic
 		for i := 0; i < 5; i++ {
 			_ = getCurrentTime()
 		}

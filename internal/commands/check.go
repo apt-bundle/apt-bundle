@@ -22,7 +22,6 @@ func init() {
 func runCheck(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Checking Aptfile: %s\n", aptfilePath)
 
-	// Parse the Aptfile
 	entries, err := aptfile.Parse(aptfilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse Aptfile: %w", err)
@@ -30,11 +29,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Checking %d entries...\n\n", len(entries))
 
-	// TODO: Implement the actual check logic
-	// 1. Check if repositories are configured
-	// 2. Check if GPG keys are present
-	// 3. Check if packages are installed
-	// 4. Report missing items
+	// TODO: Check repositories, GPG keys, packages; report missing items
 
 	return nil
 }
