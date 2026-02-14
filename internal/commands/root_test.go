@@ -67,7 +67,7 @@ func TestRootCmd(t *testing.T) {
 			cmdNames[cmd.Name()] = true
 		}
 
-		expectedCommands := []string{"check", "cleanup", "dump", "install", "lock", "sync"}
+		expectedCommands := []string{"check", "cleanup", "dump", "install", "lock", "outdated", "sync"}
 		for _, expected := range expectedCommands {
 			if !cmdNames[expected] {
 				t.Errorf("Expected subcommand %q not found", expected)

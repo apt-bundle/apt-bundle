@@ -2,6 +2,7 @@ package apt
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -71,6 +72,38 @@ func GetInstalledVersion(packageName string) (string, error) {
 		return "", nil
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// candidateVersionRE parses "Candidate: version" from apt-cache policy output
+var candidateVersionRE = regexp.MustCompile(`(?m)^\s*Candidate:\s*(.+)$`)
+
+// GetCandidateVersion returns the candidate (available) version for a package, or empty if unknown
+func GetCandidateVersion(packageName string) (string, error) {
+	output, err := runCommandWithOutput("apt-cache", "policy", packageName)
+	if err != nil {
+		return "", err
+	}
+	matches := candidateVersionRE.FindStringSubmatch(string(output))
+	if len(matches) < 2 {
+		return "", nil
+	}
+	return strings.TrimSpace(matches[1]), nil
+}
+
+// CompareVersions compares two Debian package versions. Returns -1 if a < b, 0 if a == b, 1 if a > b
+func CompareVersions(a, b string) (int, error) {
+	if a == b {
+		return 0, nil
+	}
+	_, err := runCommandWithOutput("dpkg", "--compare-versions", a, "lt", b)
+	if err == nil {
+		return -1, nil
+	}
+	_, err = runCommandWithOutput("dpkg", "--compare-versions", a, "gt", b)
+	if err == nil {
+		return 1, nil
+	}
+	return 0, fmt.Errorf("dpkg version comparison failed for %q and %q", a, b)
 }
 
 // GetAllInstalledPackages returns a list of all manually installed packages

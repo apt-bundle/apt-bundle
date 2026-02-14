@@ -105,6 +105,9 @@ sudo apt-bundle sync
 # Check if packages are installed (no root required)
 apt-bundle check
 
+# List packages with available upgrades (exit 1 if any; for CI)
+apt-bundle outdated
+
 # Generate an Aptfile from current system
 apt-bundle dump > Aptfile
 ```
