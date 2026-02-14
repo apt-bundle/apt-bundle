@@ -45,7 +45,8 @@ func TestRunCheck(t *testing.T) {
 
 		mock := testutil.NewMockExecutor()
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
-			if name == "dpkg-query" && len(args) >= 4 && args[3] == "curl" {
+			// dpkg-query -W -f=${Status} <pkg> => args are [-W, -f=${Status}, pkg]
+			if name == "dpkg-query" && len(args) >= 3 && args[2] == "curl" {
 				return []byte("install ok installed"), nil
 			}
 			return nil, errors.New("unexpected command")
