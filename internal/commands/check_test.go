@@ -1,9 +1,15 @@
 package commands
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/apt-bundle/apt-bundle/internal/apt"
+	"github.com/apt-bundle/apt-bundle/internal/testutil"
 )
 
 func TestCheckCmd(t *testing.T) {
@@ -19,26 +25,83 @@ func TestCheckCmd(t *testing.T) {
 		if checkCmd.RunE == nil {
 			t.Error("checkCmd.RunE is nil")
 		}
+
+		if checkCmd.Flags().Lookup("json") == nil {
+			t.Error("--json flag not found")
+		}
 	})
 }
 
 func TestRunCheck(t *testing.T) {
-	t.Run("with valid aptfile", func(t *testing.T) {
+	t.Run("all present with mock", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
-		content := "apt curl\napt git\n"
+		if err := os.WriteFile(tmpFile, []byte("apt curl\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		origPath := aptfilePath
+		aptfilePath = tmpFile
+		defer func() { aptfilePath = origPath }()
 
-		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
-			t.Fatalf("Failed to create temp file: %v", err)
+		mock := testutil.NewMockExecutor()
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+			if name == "dpkg-query" && len(args) >= 4 && args[3] == "curl" {
+				return []byte("install ok installed"), nil
+			}
+			return nil, errors.New("unexpected command")
+		}
+		apt.SetExecutor(mock)
+		defer apt.ResetExecutor()
+
+		err := runCheck(checkCmd, nil)
+		if err != nil {
+			t.Errorf("runCheck: %v", err)
+		}
+	})
+
+	t.Run("doCheck returns missing package", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		tmpFile := filepath.Join(tmpDir, "Aptfile")
+		if err := os.WriteFile(tmpFile, []byte("apt missingpkg\n"), 0644); err != nil {
+			t.Fatal(err)
 		}
 
-		originalPath := aptfilePath
-		defer func() { aptfilePath = originalPath }()
-		aptfilePath = tmpFile
+		mock := testutil.NewMockExecutor()
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+			if name == "dpkg-query" {
+				return nil, errors.New("not installed")
+			}
+			return nil, errors.New("unexpected")
+		}
+		apt.SetExecutor(mock)
+		defer apt.ResetExecutor()
 
-		err := runCheck(checkCmd, []string{})
+		ok, missing, err := doCheck(tmpFile)
 		if err != nil {
-			t.Errorf("runCheck() with valid Aptfile returned error: %v", err)
+			t.Fatalf("doCheck: %v", err)
+		}
+		if ok {
+			t.Error("expected ok=false")
+		}
+		if len(missing) != 1 || missing[0] != "missingpkg" {
+			t.Errorf("expected missing=[missingpkg], got %v", missing)
+		}
+	})
+
+	t.Run("CheckResult JSON roundtrip", func(t *testing.T) {
+		res := CheckResult{OK: false, Missing: []string{"pkg1"}}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(res); err != nil {
+			t.Fatal(err)
+		}
+		var decoded CheckResult
+		if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if decoded.OK != res.OK || len(decoded.Missing) != 1 || decoded.Missing[0] != "pkg1" {
+			t.Errorf("decoded = %+v", decoded)
 		}
 	})
 

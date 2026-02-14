@@ -1,35 +1,118 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
+	"strings"
 
+	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
 	"github.com/spf13/cobra"
 )
+
+var checkJSON bool
 
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check if packages and repositories from Aptfile are present",
 	Long: `Read the Aptfile and check if all specified packages and repositories
-are present on the system without installing them.`,
+are present on the system. Exit 0 only if all entries are satisfied; non-zero otherwise.
+Use --json for machine-friendly output.`,
 	RunE: runCheck,
 }
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
+	checkCmd.Flags().BoolVar(&checkJSON, "json", false, "Output result as JSON (ok, missing list)")
+}
+
+// CheckResult is the structure for --json output
+type CheckResult struct {
+	OK      bool     `json:"ok"`
+	Missing []string `json:"missing"`
+}
+
+// doCheck runs the check and returns ok and missing list (caller handles output and exit)
+func doCheck(aptFilePath string) (ok bool, missing []string, err error) {
+	entries, err := aptfile.Parse(aptFilePath)
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to parse Aptfile: %w", err)
+	}
+
+	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to list sources: %w", err)
+	}
+	sourceLines := make(map[string]bool)
+	for _, e := range sources {
+		sourceLines[e.AptfileLine] = true
+	}
+
+	for _, entry := range entries {
+		switch entry.Type {
+		case aptfile.EntryTypeApt:
+			pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+			installed, err := apt.IsPackageInstalled(pkgName)
+			if err != nil {
+				return false, nil, fmt.Errorf("check package %s: %w", pkgName, err)
+			}
+			if !installed {
+				missing = append(missing, pkgName)
+			}
+
+		case aptfile.EntryTypePPA:
+			line := "ppa " + entry.Value
+			if !sourceLines[line] {
+				missing = append(missing, line)
+			}
+
+		case aptfile.EntryTypeDeb:
+			line := "deb " + entry.Value
+			if !sourceLines[line] {
+				missing = append(missing, line)
+			}
+
+		case aptfile.EntryTypeKey:
+			keyPath := apt.KeyPathForURL(entry.Value)
+			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+				missing = append(missing, "key "+entry.Value)
+			}
+		}
+	}
+
+	sort.Strings(missing)
+	return len(missing) == 0, missing, nil
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
-	fmt.Printf("Checking Aptfile: %s\n", aptfilePath)
-
-	entries, err := aptfile.Parse(aptfilePath)
+	ok, missing, err := doCheck(aptfilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse Aptfile: %w", err)
+		return err
 	}
 
+	if checkJSON {
+		out := CheckResult{OK: ok, Missing: missing}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(out); err != nil {
+			return err
+		}
+		if !ok {
+			os.Exit(1)
+		}
+		return nil
+	}
+
+	entries, _ := aptfile.Parse(aptfilePath)
+	fmt.Printf("Checking Aptfile: %s\n", aptfilePath)
 	fmt.Printf("Checking %d entries...\n\n", len(entries))
-
-	// TODO: Check repositories, GPG keys, packages; report missing items
-
+	if ok {
+		fmt.Println("✓ All entries present.")
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "✗ %d missing: %v\n", len(missing), missing)
+	os.Exit(1)
 	return nil
 }

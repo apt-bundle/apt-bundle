@@ -17,6 +17,13 @@ const (
 	KeyPrefix = "apt-bundle-"
 )
 
+// KeyPathForURL returns the path where AddGPGKey would store the key for the given URL
+func KeyPathForURL(keyURL string) string {
+	hash := sha256.Sum256([]byte(keyURL))
+	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
+	return filepath.Join(KeyringDir, filename)
+}
+
 // httpGet is the function used to make HTTP requests (overridable for testing)
 var httpGet = http.Get
 

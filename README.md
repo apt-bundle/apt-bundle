@@ -102,8 +102,10 @@ sudo apt-bundle --no-update
 # Make system match Aptfile (install missing, remove no-longer-listed)
 sudo apt-bundle sync
 
-# Check if packages are installed (no root required)
+# Check if packages/repos/keys from Aptfile are present (exit 0 only if all present)
 apt-bundle check
+# Machine-friendly output for CI
+apt-bundle check --json
 
 # Validate Aptfile and check environment (apt-get, add-apt-repository, state)
 apt-bundle doctor
