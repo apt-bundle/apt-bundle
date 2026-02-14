@@ -26,7 +26,9 @@ func TestAddGPGKey(t *testing.T) {
 		})
 
 		keyringPath := filepath.Join(tmpDir, "keyrings")
-		os.MkdirAll(keyringPath, 0755)
+		if err := os.MkdirAll(keyringPath, 0755); err != nil {
+			t.Fatalf("Failed to create keyring dir: %v", err)
+		}
 
 		keyPath, err := AddGPGKey("https://example.com/key.gpg")
 		if err != nil {
@@ -127,7 +129,7 @@ func TestSetHTTPGet(t *testing.T) {
 		}, nil
 	})
 
-	httpGet("http://example.com")
+	_, _ = httpGet("http://example.com")
 	if !customCalled {
 		t.Error("Custom httpGet function was not called")
 	}

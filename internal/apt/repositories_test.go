@@ -243,7 +243,9 @@ func TestAddDebRepository(t *testing.T) {
 		keyPath := filepath.Join(tmpDir, "docker.gpg")
 
 		// Create a fake key file
-		os.WriteFile(keyPath, []byte("fake key"), 0644)
+		if err := os.WriteFile(keyPath, []byte("fake key"), 0644); err != nil {
+			t.Fatalf("Failed to create fake key file: %v", err)
+		}
 
 		// This will fail without write permissions to /etc/apt/sources.list.d
 		// but we can verify it doesn't panic and handles the error

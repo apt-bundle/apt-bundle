@@ -28,24 +28,21 @@ func TestCleanupCmd(t *testing.T) {
 		forceFlag := cleanupCmd.Flags().Lookup("force")
 		if forceFlag == nil {
 			t.Error("--force flag not found")
-		}
-		if forceFlag.DefValue != "false" {
+		} else if forceFlag.DefValue != "false" {
 			t.Errorf("--force default = %v, want 'false'", forceFlag.DefValue)
 		}
 
 		zapFlag := cleanupCmd.Flags().Lookup("zap")
 		if zapFlag == nil {
 			t.Error("--zap flag not found")
-		}
-		if zapFlag.DefValue != "false" {
+		} else if zapFlag.DefValue != "false" {
 			t.Errorf("--zap default = %v, want 'false'", zapFlag.DefValue)
 		}
 
 		autoremoveFlag := cleanupCmd.Flags().Lookup("autoremove")
 		if autoremoveFlag == nil {
 			t.Error("--autoremove flag not found")
-		}
-		if autoremoveFlag.DefValue != "false" {
+		} else if autoremoveFlag.DefValue != "false" {
 			t.Errorf("--autoremove default = %v, want 'false'", autoremoveFlag.DefValue)
 		}
 	})
