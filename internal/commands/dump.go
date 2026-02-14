@@ -26,6 +26,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	fmt.Println("# Generated on:", getCurrentTime())
 	fmt.Println()
 
+	fmt.Println("# --- Packages ---")
 	packages, err := apt.GetAllInstalledPackages()
 	if err != nil {
 		return fmt.Errorf("failed to list installed packages: %w", err)
@@ -43,6 +44,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	}
 	if len(sources) > 0 {
 		fmt.Println()
+		fmt.Println("# --- Repositories ---")
 		for _, e := range sources {
 			fmt.Println(e.AptfileLine)
 		}
