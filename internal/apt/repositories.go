@@ -130,13 +130,13 @@ func parseDebLine(line string) (*DebRepository, error) {
 		Types: "deb",
 	}
 
-	// Remove leading "deb " or "deb-src " if present
-	line = strings.TrimPrefix(line, "deb-src ")
+	// Remove leading "deb " or "deb-src " if present (check before trim)
 	if strings.HasPrefix(line, "deb-src ") {
 		repo.Types = "deb-src"
 		line = strings.TrimPrefix(line, "deb-src ")
+	} else if strings.HasPrefix(line, "deb ") {
+		line = strings.TrimPrefix(line, "deb ")
 	}
-	line = strings.TrimPrefix(line, "deb ")
 
 	// Extract options in brackets [key=value key2=value2]
 	optionsRegex := regexp.MustCompile(`^\[([^\]]+)\]\s*`)

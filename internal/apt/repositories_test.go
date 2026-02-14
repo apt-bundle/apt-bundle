@@ -165,6 +165,19 @@ func TestParseDebLine(t *testing.T) {
 		}
 	})
 
+	t.Run("deb-src line", func(t *testing.T) {
+		repo, err := parseDebLine("deb-src https://example.com/ubuntu jammy main")
+		if err != nil {
+			t.Fatalf("parseDebLine failed: %v", err)
+		}
+		if repo.Types != "deb-src" {
+			t.Errorf("Expected type 'deb-src', got '%s'", repo.Types)
+		}
+		if repo.URIs != "https://example.com/ubuntu" {
+			t.Errorf("Expected URI 'https://example.com/ubuntu', got '%s'", repo.URIs)
+		}
+	})
+
 	t.Run("invalid deb line - too few parts", func(t *testing.T) {
 		_, err := parseDebLine("https://example.com/ubuntu")
 		if err == nil {

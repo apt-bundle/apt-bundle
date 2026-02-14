@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -24,8 +25,11 @@ func KeyPathForURL(keyURL string) string {
 	return filepath.Join(KeyringDir, filename)
 }
 
+// keyHTTPClient is used for key downloads; has timeout to avoid hanging
+var keyHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 // httpGet is the function used to make HTTP requests (overridable for testing)
-var httpGet = http.Get
+var httpGet = keyHTTPClient.Get
 
 // AddGPGKey downloads and adds a GPG key from a URL
 // Returns the path to the saved key file for use with Signed-By in DEB822 format
@@ -133,5 +137,5 @@ func SetHTTPGet(f func(string) (*http.Response, error)) {
 
 // ResetHTTPGet resets the HTTP get function to default (for testing only)
 func ResetHTTPGet() {
-	httpGet = http.Get
+	httpGet = keyHTTPClient.Get
 }

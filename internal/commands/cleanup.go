@@ -57,7 +57,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	// Get packages from Aptfile
 	aptfilePackages := []string{}
 	for _, entry := range entries {
-		if entry.Type == "apt" {
+		if entry.Type == aptfile.EntryTypeApt {
 			aptfilePackages = append(aptfilePackages, entry.Value)
 		}
 	}

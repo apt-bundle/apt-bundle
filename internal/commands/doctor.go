@@ -45,7 +45,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 
 	if doctorAptfileOnly {
 		if failed {
-			os.Exit(1)
+			return fmt.Errorf("Aptfile validation failed")
 		}
 		return nil
 	}
@@ -73,7 +73,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 
 	if failed {
-		os.Exit(1)
+		return fmt.Errorf("environment check failed")
 	}
 	return nil
 }

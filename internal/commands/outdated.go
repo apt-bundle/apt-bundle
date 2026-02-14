@@ -97,6 +97,5 @@ func runOutdated(cmd *cobra.Command, args []string) error {
 	for _, e := range outdated {
 		fmt.Printf("%s (installed: %s, available: %s)\n", e.Name, e.Installed, e.Candidate)
 	}
-	os.Exit(1)
-	return nil
+	return fmt.Errorf("%d package(s) have upgrades available", len(outdated))
 }

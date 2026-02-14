@@ -34,16 +34,16 @@ type CheckResult struct {
 	Missing []string `json:"missing"`
 }
 
-// doCheck runs the check and returns ok and missing list (caller handles output and exit)
-func doCheck(aptFilePath string) (ok bool, missing []string, err error) {
-	entries, err := aptfile.Parse(aptFilePath)
+// doCheck runs the check and returns ok, missing list, and entries (parse once).
+func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.Entry, err error) {
+	entries, err = aptfile.Parse(aptFilePath)
 	if err != nil {
-		return false, nil, fmt.Errorf("failed to parse Aptfile: %w", err)
+		return false, nil, nil, fmt.Errorf("failed to parse Aptfile: %w", err)
 	}
 
 	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
 	if err != nil {
-		return false, nil, fmt.Errorf("failed to list sources: %w", err)
+		return false, nil, nil, fmt.Errorf("failed to list sources: %w", err)
 	}
 	sourceLines := make(map[string]bool)
 	for _, e := range sources {
@@ -56,7 +56,7 @@ func doCheck(aptFilePath string) (ok bool, missing []string, err error) {
 			pkgName := strings.SplitN(entry.Value, "=", 2)[0]
 			installed, err := apt.IsPackageInstalled(pkgName)
 			if err != nil {
-				return false, nil, fmt.Errorf("check package %s: %w", pkgName, err)
+				return false, nil, nil, fmt.Errorf("check package %s: %w", pkgName, err)
 			}
 			if !installed {
 				missing = append(missing, pkgName)
@@ -83,11 +83,11 @@ func doCheck(aptFilePath string) (ok bool, missing []string, err error) {
 	}
 
 	sort.Strings(missing)
-	return len(missing) == 0, missing, nil
+	return len(missing) == 0, missing, entries, nil
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
-	ok, missing, err := doCheck(aptfilePath)
+	ok, missing, entries, err := doCheck(aptfilePath)
 	if err != nil {
 		return err
 	}
@@ -100,19 +100,16 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if !ok {
-			os.Exit(1)
+			return fmt.Errorf("%d entries missing", len(missing))
 		}
 		return nil
 	}
 
-	entries, _ := aptfile.Parse(aptfilePath)
 	fmt.Printf("Checking Aptfile: %s\n", aptfilePath)
 	fmt.Printf("Checking %d entries...\n\n", len(entries))
 	if ok {
 		fmt.Println("✓ All entries present.")
 		return nil
 	}
-	fmt.Fprintf(os.Stderr, "✗ %d missing: %v\n", len(missing), missing)
-	os.Exit(1)
-	return nil
+	return fmt.Errorf("%d missing: %v", len(missing), missing)
 }

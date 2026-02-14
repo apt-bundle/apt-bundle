@@ -77,7 +77,7 @@ func TestRunCheck(t *testing.T) {
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
-		ok, missing, err := doCheck(tmpFile)
+		ok, missing, _, err := doCheck(tmpFile)
 		if err != nil {
 			t.Fatalf("doCheck: %v", err)
 		}
