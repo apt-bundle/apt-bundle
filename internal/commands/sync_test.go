@@ -29,8 +29,7 @@ func TestSyncCmd(t *testing.T) {
 		autoremoveFlag := syncCmd.Flags().Lookup("autoremove")
 		if autoremoveFlag == nil {
 			t.Error("--autoremove flag not found")
-		}
-		if autoremoveFlag.DefValue != "false" {
+		} else if autoremoveFlag.DefValue != "false" {
 			t.Errorf("--autoremove default = %v, want 'false'", autoremoveFlag.DefValue)
 		}
 	})
