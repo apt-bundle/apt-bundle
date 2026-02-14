@@ -56,16 +56,21 @@ func TestRunOutdated(t *testing.T) {
 		apt.SetExecutor(mock)
 		defer apt.ResetExecutor()
 
-		var buf bytes.Buffer
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
 		oldOut, oldErr := os.Stdout, os.Stderr
-		os.Stdout = &buf
-		os.Stderr = &buf
-		defer func() { os.Stdout, os.Stderr = oldOut, oldErr }()
+		os.Stdout, os.Stderr = w, w
+		defer func() { os.Stdout, os.Stderr = oldOut, oldErr; w.Close() }()
 
-		err := runOutdated(outdatedCmd, nil)
+		err = runOutdated(outdatedCmd, nil)
 		if err != nil {
 			t.Fatalf("runOutdated: %v", err)
 		}
+		w.Close()
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r)
 		// Should not exit 1 when nothing outdated; we didn't call os.Exit
 		if buf.String() != "" {
 			t.Logf("output: %s", buf.String())

@@ -35,15 +35,21 @@ func TestRunDoctor(t *testing.T) {
 		doctorAptfileOnly = true
 		defer func() { doctorAptfileOnly = false }()
 
-		var buf bytes.Buffer
-		os.Stdout = &buf
-		os.Stderr = &buf
-		defer func() { os.Stdout, os.Stderr = os.Stdout, os.Stderr }()
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		oldOut, oldErr := os.Stdout, os.Stderr
+		os.Stdout, os.Stderr = w, w
+		defer func() { os.Stdout, os.Stderr = oldOut, oldErr; w.Close() }()
 
-		err := runDoctor(doctorCmd, nil)
+		err = runDoctor(doctorCmd, nil)
 		if err != nil {
 			t.Fatalf("runDoctor: %v", err)
 		}
+		w.Close()
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r)
 		out := buf.String()
 		if !bytes.Contains([]byte(out), []byte("Aptfile valid")) {
 			t.Errorf("output should contain 'Aptfile valid', got: %s", out)
@@ -55,14 +61,21 @@ func TestRunDoctor(t *testing.T) {
 		doctorAptfileOnly = true
 		defer func() { doctorAptfileOnly = false; aptfilePath = filepath.Join(dir, "Aptfile") }()
 
-		var buf bytes.Buffer
-		os.Stderr = &buf
-		defer func() { os.Stderr = os.Stderr }()
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		oldErr := os.Stderr
+		os.Stderr = w
+		defer func() { os.Stderr = oldErr; w.Close() }()
 
-		err := runDoctor(doctorCmd, nil)
+		err = runDoctor(doctorCmd, nil)
 		if err != nil {
 			t.Fatalf("runDoctor: %v", err)
 		}
+		w.Close()
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(r)
 		if !bytes.Contains(buf.Bytes(), []byte("not found")) {
 			t.Errorf("stderr should warn about missing Aptfile, got: %s", buf.String())
 		}
