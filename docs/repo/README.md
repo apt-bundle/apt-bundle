@@ -1,3 +1,7 @@
+---
+title: APT Repository
+---
+
 # apt-bundle APT Repository
 
 This directory contains the APT repository for the `apt-bundle` package.
@@ -78,7 +82,7 @@ repo/
 
 ## Current Version
 
-The repository currently contains version **0.1.8**.
+The repository currently contains version **{{ site.data.version.apt_repo_version }}**.
 
 ## Notes
 

@@ -1,0 +1,3 @@
+# Populated at deploy time by deploy-pages workflow from GitHub API.
+# Fallback for local Jekyll builds.
+apt_repo_version: "latest"
