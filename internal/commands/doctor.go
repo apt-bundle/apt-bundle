@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -69,7 +70,12 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "✗ state file: %v (path: %s)\n", err, apt.StateDir)
 		failed = true
 	} else {
-		fmt.Println("✓ state file readable")
+		statePath := filepath.Join(apt.StateDir, apt.StateFile)
+		if _, err := os.Stat(statePath); err == nil {
+			fmt.Println("✓ state file readable")
+		} else {
+			fmt.Println("✓ state file OK (will be created on first install)")
+		}
 	}
 
 	if failed {

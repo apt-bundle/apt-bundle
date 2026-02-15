@@ -97,6 +97,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			if err := apt.Update(); err != nil {
 				return fmt.Errorf("failed to update package lists: %w", err)
 			}
+		} else if reposAdded {
+			fmt.Println("⚠️  Warning: Repositories were added; run without --no-update to fetch package lists.")
 		}
 	}
 
