@@ -97,7 +97,8 @@ func ReadLockFile() ([]string, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.Contains(line, "=") {
+		// Require "pkg=version" with both parts non-empty
+		if pkg, ver, ok := strings.Cut(line, "="); ok && pkg != "" && ver != "" {
 			specs = append(specs, line)
 		}
 	}

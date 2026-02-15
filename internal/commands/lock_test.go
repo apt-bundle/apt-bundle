@@ -50,4 +50,23 @@ func TestReadLockFile(t *testing.T) {
 			t.Errorf("expected 2 specs, got %d", len(specs))
 		}
 	})
+	t.Run("rejects malformed lines", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "Aptfile.lock"), []byte("valid=1.0\n=1.0\npkg=\n# comment\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		orig := aptfilePath
+		defer func() { aptfilePath = orig }()
+		aptfilePath = filepath.Join(dir, "Aptfile")
+		if err := os.WriteFile(aptfilePath, []byte("apt valid\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		specs, err := ReadLockFile()
+		if err != nil {
+			t.Fatalf("ReadLockFile: %v", err)
+		}
+		if len(specs) != 1 || specs[0] != "valid=1.0" {
+			t.Errorf("expected [valid=1.0], got %v", specs)
+		}
+	})
 }

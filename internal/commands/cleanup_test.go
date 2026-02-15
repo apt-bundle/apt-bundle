@@ -6,8 +6,72 @@ import (
 	"testing"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
+	"github.com/apt-bundle/apt-bundle/internal/aptfile"
 	"github.com/apt-bundle/apt-bundle/internal/testutil"
 )
+
+func TestExtractPackageNames(t *testing.T) {
+	t.Run("strips version and deduplicates", func(t *testing.T) {
+		entries := []aptfile.Entry{
+			{Type: aptfile.EntryTypeApt, Value: "nano=2.9.3-2"},
+			{Type: aptfile.EntryTypeApt, Value: "curl"},
+			{Type: aptfile.EntryTypeApt, Value: "nano"}, // duplicate
+		}
+		names := extractPackageNames(entries)
+		if len(names) != 2 {
+			t.Errorf("expected 2 names (nano, curl), got %d: %v", len(names), names)
+		}
+		hasNano, hasCurl := false, false
+		for _, n := range names {
+			if n == "nano" {
+				hasNano = true
+			}
+			if n == "curl" {
+				hasCurl = true
+			}
+		}
+		if !hasNano || !hasCurl {
+			t.Errorf("expected nano and curl, got %v", names)
+		}
+	})
+	t.Run("version-pinned package not removed", func(t *testing.T) {
+		// State has "nano"; Aptfile has "apt nano=2.9.3-2". Should NOT remove nano.
+		cleanup := setupMockRoot()
+		defer cleanup()
+
+		apt.SetExecutor(testutil.NewMockExecutor())
+		defer apt.ResetExecutor()
+
+		tmpDir := t.TempDir()
+		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
+		defer apt.ResetStatePath()
+
+		state := apt.NewState()
+		state.AddPackage("nano")
+		if err := state.Save(); err != nil {
+			t.Fatalf("Failed to save state: %v", err)
+		}
+
+		tmpFile := filepath.Join(tmpDir, "Aptfile")
+		if err := os.WriteFile(tmpFile, []byte("apt \"nano=2.9.3-2\"\n"), 0644); err != nil {
+			t.Fatalf("Failed to create Aptfile: %v", err)
+		}
+
+		origPath := aptfilePath
+		aptfilePath = tmpFile
+		defer func() { aptfilePath = origPath }()
+
+		cleanupForce = false
+		cleanupZap = false
+		defer func() { cleanupForce = false; cleanupZap = false }()
+
+		err := runCleanup(cleanupCmd, []string{})
+		if err != nil {
+			t.Errorf("runCleanup: %v", err)
+		}
+		// Should print "Nothing to clean up" - nano is in Aptfile (as version-pinned)
+	})
+}
 
 func TestCleanupCmd(t *testing.T) {
 	t.Run("cleanup command exists", func(t *testing.T) {
