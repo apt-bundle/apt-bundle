@@ -46,9 +46,10 @@ go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix
 # 2. Re-stage any files modified by autofix
 git add -u
 
-# 3. Verify build
+# 3. Verify build (output to build/ which is gitignored)
 echo "  → go build"
-go build ./cmd/apt-bundle
+mkdir -p build
+go build -o build/apt-bundle ./cmd/apt-bundle
 
 # 4. Lint (catch unfixable issues)
 echo "  → golangci-lint"
