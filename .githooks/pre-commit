@@ -10,6 +10,33 @@ if ! git diff --cached --name-only | grep -q '\.go$'; then
   exit 0
 fi
 
+# Ensure go is available: try direnv first, then common PATH locations.
+# Git hooks often run with minimal PATH (e.g. from IDE), so we need to find go.
+ensure_go() {
+  if command -v go >/dev/null 2>&1; then
+    return 0
+  fi
+  # Try direnv (loads .envrc if present)
+  if command -v direnv >/dev/null 2>&1; then
+    eval "$(direnv export sh 2>/dev/null)" || true
+    if command -v go >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  # Fallback: add common Go install locations to PATH
+  export PATH="/usr/local/go/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+  if command -v go >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Error: 'go' not found. Pre-commit checks require Go."
+  echo "  - Run 'git commit' from a terminal where 'go' is in PATH, or"
+  echo "  - Use direnv with a .envrc that adds Go to PATH, or"
+  echo "  - Install Go to /usr/local/go or ensure it's in your PATH."
+  echo "  - To skip checks: git commit --no-verify"
+  exit 1
+}
+ensure_go
+
 echo "Running pre-commit checks..."
 
 # 1. Autofix (formatting, imports)
