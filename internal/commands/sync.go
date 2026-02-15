@@ -66,7 +66,10 @@ func runSyncDryRun() error {
 
 	// What would install do
 	fmt.Printf("Reading Aptfile from: %s (dry-run)\n", aptfilePath)
-	wouldInstall, wouldRemove := syncDryRunPlan(entries)
+	wouldInstall, wouldRemove, err := syncDryRunPlan(entries)
+	if err != nil {
+		return fmt.Errorf("sync dry-run: %w", err)
+	}
 	if len(wouldInstall) > 0 {
 		fmt.Println("--- would install ---")
 		for _, p := range wouldInstall {
@@ -86,32 +89,31 @@ func runSyncDryRun() error {
 }
 
 // syncDryRunPlan returns packages that would be installed and that would be removed
-func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string) {
+func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string, err error) {
 	state, err := apt.LoadState()
 	if err != nil {
-		return nil, nil
+		return nil, nil, fmt.Errorf("load state: %w", err)
 	}
 	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
 	if err != nil {
-		return nil, nil
+		return nil, nil, fmt.Errorf("list sources: %w", err)
 	}
 	sourceLines := make(map[string]bool)
 	for _, e := range sources {
 		sourceLines[e.AptfileLine] = true
 	}
 
-	var aptfilePackages []string
+	aptfilePackages := extractPackageNames(entries)
 	for _, entry := range entries {
 		if entry.Type != aptfile.EntryTypeApt {
 			continue
 		}
 		pkgName := strings.SplitN(entry.Value, "=", 2)[0]
-		aptfilePackages = append(aptfilePackages, pkgName)
 		installed, _ := apt.IsPackageInstalled(pkgName)
 		if !installed {
 			wouldInstall = append(wouldInstall, entry.Value)
 		}
 	}
 	wouldRemove = state.GetPackagesNotIn(aptfilePackages)
-	return wouldInstall, wouldRemove
+	return wouldInstall, wouldRemove, nil
 }

@@ -54,13 +54,8 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse Aptfile: %w", err)
 	}
 
-	// Get packages from Aptfile
-	aptfilePackages := []string{}
-	for _, entry := range entries {
-		if entry.Type == aptfile.EntryTypeApt {
-			aptfilePackages = append(aptfilePackages, entry.Value)
-		}
-	}
+	// Get package names from Aptfile (strip version for comparison with state/apt-mark)
+	aptfilePackages := extractPackageNames(entries)
 
 	var packagesToRemove []string
 
@@ -148,6 +143,23 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// extractPackageNames returns deduplicated package names from apt entries (strips version specs)
+func extractPackageNames(entries []aptfile.Entry) []string {
+	seen := make(map[string]bool)
+	var names []string
+	for _, entry := range entries {
+		if entry.Type != aptfile.EntryTypeApt {
+			continue
+		}
+		pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+		if !seen[pkgName] {
+			seen[pkgName] = true
+			names = append(names, pkgName)
+		}
+	}
+	return names
 }
 
 // getPackagesToCleanup returns packages that were installed by apt-bundle but are no longer in Aptfile
