@@ -125,6 +125,14 @@ func splitRespectingQuotes(s string) []string {
 	return parts
 }
 
+// ExtractPkgName returns the package name from a spec like "curl" or "nano=2.9.3-2".
+func ExtractPkgName(spec string) string {
+	if idx := strings.Index(spec, "="); idx > 0 {
+		return spec[:idx]
+	}
+	return spec
+}
+
 func unquote(s string) string {
 	if len(s) >= 2 {
 		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {

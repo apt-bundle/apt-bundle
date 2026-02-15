@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -53,7 +52,7 @@ func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.E
 	for _, entry := range entries {
 		switch entry.Type {
 		case aptfile.EntryTypeApt:
-			pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+			pkgName := aptfile.ExtractPkgName(entry.Value)
 			installed, err := apt.IsPackageInstalled(pkgName)
 			if err != nil {
 				return false, nil, nil, fmt.Errorf("check package %s: %w", pkgName, err)

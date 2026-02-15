@@ -80,6 +80,34 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
+func TestSplitLines(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{"unix newlines", "a\nb\nc", []string{"a", "b", "c"}},
+		{"windows newlines", "a\r\nb\r\nc", []string{"a", "b", "c"}},
+		{"empty", "", []string{}},
+		{"single line", "only", []string{"only"}},
+		{"trailing newline", "a\nb\n", []string{"a", "b"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := splitLines(tt.input)
+			if len(got) != len(tt.want) {
+				t.Errorf("splitLines() got %d lines, want %d", len(got), len(tt.want))
+				return
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("splitLines()[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
 // Benchmark tests
 func BenchmarkIsPackageInstalled(b *testing.B) {
 	if _, err := exec.LookPath("dpkg-query"); err != nil {
@@ -98,7 +126,7 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 	t.Run("package is installed", func(t *testing.T) {
 		mock := testutil.NewMockExecutor()
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
-			return []byte("install ok installed"), nil
+			return []byte(dpkgStatusInstalled), nil
 		}
 		SetExecutor(mock)
 
@@ -153,7 +181,7 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 	t.Run("verifies command arguments", func(t *testing.T) {
 		mock := testutil.NewMockExecutor()
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
-			return []byte("install ok installed"), nil
+			return []byte(dpkgStatusInstalled), nil
 		}
 		SetExecutor(mock)
 

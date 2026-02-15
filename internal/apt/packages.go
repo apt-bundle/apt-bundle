@@ -1,10 +1,17 @@
 package apt
 
 import (
+	"bufio"
 	"fmt"
 	"regexp"
 	"strings"
 )
+
+// dpkg status string for installed packages
+const dpkgStatusInstalled = "install ok installed"
+
+// CandidateVersionNone is the apt-cache policy output when no candidate version exists
+const CandidateVersionNone = "(none)"
 
 // IsPackageInstalled checks if a package is installed on the system
 func IsPackageInstalled(packageName string) (bool, error) {
@@ -14,7 +21,7 @@ func IsPackageInstalled(packageName string) (bool, error) {
 	}
 
 	status := string(output)
-	return status == "install ok installed", nil
+	return status == dpkgStatusInstalled, nil
 }
 
 // InstallPackage installs a package using apt-get
@@ -128,19 +135,9 @@ func GetAllInstalledPackages() ([]string, error) {
 // splitLines splits a string by newlines, handling both \n and \r\n
 func splitLines(s string) []string {
 	var lines []string
-	var current []byte
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			lines = append(lines, string(current))
-			current = current[:0]
-		} else if s[i] == '\r' {
-			// Skip \r
-		} else {
-			current = append(current, s[i])
-		}
-	}
-	if len(current) > 0 {
-		lines = append(lines, string(current))
+	sc := bufio.NewScanner(strings.NewReader(s))
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
 	}
 	return lines
 }

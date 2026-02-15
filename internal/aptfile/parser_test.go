@@ -310,6 +310,26 @@ func TestUnquote(t *testing.T) {
 	}
 }
 
+func TestExtractPkgName(t *testing.T) {
+	tests := []struct {
+		spec string
+		want string
+	}{
+		{"curl", "curl"},
+		{"nano=2.9.3-2", "nano"},
+		{"docker-ce=5:19.03.13~3-0~ubuntu-focal", "docker-ce"},
+		{"pkg", "pkg"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.spec, func(t *testing.T) {
+			got := ExtractPkgName(tt.spec)
+			if got != tt.want {
+				t.Errorf("ExtractPkgName(%q) = %q, want %q", tt.spec, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEntryTypes(t *testing.T) {
 	tests := []struct {
 		entryType EntryType

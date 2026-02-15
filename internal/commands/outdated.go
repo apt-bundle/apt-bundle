@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -49,8 +48,7 @@ func collectOutdated(aptFilePath string) (outdated []OutdatedEntry, numApt int, 
 			continue
 		}
 		numApt++
-		pkg := strings.SplitN(e.Value, "=", 2)[0]
-		packages = append(packages, pkg)
+		packages = append(packages, aptfile.ExtractPkgName(e.Value))
 	}
 
 	for _, pkg := range packages {
@@ -65,7 +63,7 @@ func collectOutdated(aptFilePath string) (outdated []OutdatedEntry, numApt int, 
 		if err != nil {
 			return nil, numApt, fmt.Errorf("failed to get candidate version of %s: %w", pkg, err)
 		}
-		if candidate == "" || candidate == "(none)" {
+		if candidate == "" || candidate == apt.CandidateVersionNone {
 			continue
 		}
 		cmp, err := apt.CompareVersions(installed, candidate)

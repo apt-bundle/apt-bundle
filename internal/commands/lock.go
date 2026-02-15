@@ -52,11 +52,7 @@ func runLock(cmd *cobra.Command, args []string) error {
 	}
 	var locked []pkgVer
 	for _, pkg := range packages {
-		// Strip version if present for lookup (e.g. "nano=2.9.3" -> "nano")
-		pkgName := pkg
-		if idx := strings.Index(pkg, "="); idx > 0 {
-			pkgName = pkg[:idx]
-		}
+		pkgName := aptfile.ExtractPkgName(pkg)
 		ver, err := apt.GetInstalledVersion(pkgName)
 		if err != nil || ver == "" {
 			fmt.Printf("Warning: %s not installed, skipping in lock file\n", pkgName)

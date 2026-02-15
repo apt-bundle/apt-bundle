@@ -120,10 +120,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if len(packagesToInstall) > 0 {
 		fmt.Printf("Installing %d packages...\n", len(packagesToInstall))
 		for _, pkg := range packagesToInstall {
-			pkgName := pkg
-			if idx := strings.Index(pkg, "="); idx > 0 {
-				pkgName = pkg[:idx]
-			}
+			pkgName := aptfile.ExtractPkgName(pkg)
 			installed, err := apt.IsPackageInstalled(pkgName)
 			if err != nil {
 				fmt.Printf("Warning: Could not check if %s is installed: %v\n", pkgName, err)
@@ -169,10 +166,7 @@ func writeLockFileFromPackages(packages []string) error {
 	}
 	var locked []pkgVer
 	for _, pkg := range packages {
-		pkgName := pkg
-		if idx := strings.Index(pkg, "="); idx > 0 {
-			pkgName = pkg[:idx]
-		}
+		pkgName := aptfile.ExtractPkgName(pkg)
 		ver, err := apt.GetInstalledVersion(pkgName)
 		if err != nil || ver == "" {
 			continue
@@ -220,7 +214,7 @@ func runInstallDryRun(entries []aptfile.Entry) error {
 				wouldAddRepos = append(wouldAddRepos, line)
 			}
 		case aptfile.EntryTypeApt:
-			pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+			pkgName := aptfile.ExtractPkgName(entry.Value)
 			installed, _ := apt.IsPackageInstalled(pkgName)
 			if !installed {
 				wouldInstall = append(wouldInstall, entry.Value)

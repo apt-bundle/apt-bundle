@@ -153,7 +153,7 @@ func extractPackageNames(entries []aptfile.Entry) []string {
 		if entry.Type != aptfile.EntryTypeApt {
 			continue
 		}
-		pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+		pkgName := aptfile.ExtractPkgName(entry.Value)
 		if !seen[pkgName] {
 			seen[pkgName] = true
 			names = append(names, pkgName)

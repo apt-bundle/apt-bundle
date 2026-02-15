@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -108,7 +107,7 @@ func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string
 		if entry.Type != aptfile.EntryTypeApt {
 			continue
 		}
-		pkgName := strings.SplitN(entry.Value, "=", 2)[0]
+		pkgName := aptfile.ExtractPkgName(entry.Value)
 		installed, _ := apt.IsPackageInstalled(pkgName)
 		if !installed {
 			wouldInstall = append(wouldInstall, entry.Value)
