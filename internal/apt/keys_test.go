@@ -57,17 +57,37 @@ func TestAddGPGKey(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid URL format", func(t *testing.T) {
-		_, err := AddGPGKey("not-a-valid-url")
-		if err != nil {
-			t.Logf("AddGPGKey() with invalid URL returned error: %v", err)
+	t.Run("reject http://", func(t *testing.T) {
+		_, err := AddGPGKey("http://example.com/key.gpg")
+		if err == nil {
+			t.Error("Expected error for http:// URL")
+		}
+		if err != nil && !strings.Contains(err.Error(), "https") {
+			t.Errorf("Expected error to mention https, got: %v", err)
 		}
 	})
 
-	t.Run("keyserver URL", func(t *testing.T) {
+	t.Run("reject file://", func(t *testing.T) {
+		_, err := AddGPGKey("file:///etc/passwd")
+		if err == nil {
+			t.Error("Expected error for file:// URL")
+		}
+		if err != nil && !strings.Contains(err.Error(), "file") {
+			t.Errorf("Expected error to mention file, got: %v", err)
+		}
+	})
+
+	t.Run("reject invalid URL", func(t *testing.T) {
+		_, err := AddGPGKey("not-a-valid-url")
+		if err == nil {
+			t.Error("Expected error for invalid URL")
+		}
+	})
+
+	t.Run("reject keyserver://", func(t *testing.T) {
 		_, err := AddGPGKey("keyserver://keyserver.ubuntu.com/12345")
-		if err != nil {
-			t.Logf("AddGPGKey() with keyserver URL returned error: %v", err)
+		if err == nil {
+			t.Error("Expected error for keyserver:// URL")
 		}
 	})
 }

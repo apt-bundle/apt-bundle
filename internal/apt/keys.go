@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,26 @@ const (
 	// KeyPrefix is the prefix for apt-bundle managed key files
 	KeyPrefix = "apt-bundle-"
 )
+
+// validateKeyURL ensures the URL uses https://. Rejects http://, file://, and other schemes.
+func validateKeyURL(keyURL string) error {
+	u, err := url.Parse(keyURL)
+	if err != nil {
+		return fmt.Errorf("invalid key URL: %w", err)
+	}
+	switch u.Scheme {
+	case "https":
+		return nil
+	case "http":
+		return fmt.Errorf("key URL must use https://, not http:// (rejected for security)")
+	case "file":
+		return fmt.Errorf("file:// key URLs are not allowed (rejected for security)")
+	case "":
+		return fmt.Errorf("invalid key URL: missing scheme (use https://)")
+	default:
+		return fmt.Errorf("key URL scheme %q not allowed; use https://", u.Scheme)
+	}
+}
 
 // KeyPathForURL returns the path where AddGPGKey would store the key for the given URL
 func KeyPathForURL(keyURL string) string {
@@ -33,7 +54,12 @@ var httpGet = keyHTTPClient.Get
 
 // AddGPGKey downloads and adds a GPG key from a URL
 // Returns the path to the saved key file for use with Signed-By in DEB822 format
+// Only https:// URLs are allowed; http:// and file:// are rejected for security.
 func AddGPGKey(keyURL string) (string, error) {
+	if err := validateKeyURL(keyURL); err != nil {
+		return "", err
+	}
+
 	fmt.Printf("Adding GPG key from: %s\n", keyURL)
 
 	hash := sha256.Sum256([]byte(keyURL))
