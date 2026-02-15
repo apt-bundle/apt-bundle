@@ -13,7 +13,10 @@ const dpkgStatusInstalled = "install ok installed"
 // CandidateVersionNone is the apt-cache policy output when no candidate version exists
 const CandidateVersionNone = "(none)"
 
-// IsPackageInstalled checks if a package is installed on the system
+// IsPackageInstalled checks if a package is installed on the system.
+// On any dpkg-query failure (package not found, command error, permission denied),
+// it returns (false, nil). Callers cannot distinguish "not installed" from "check failed";
+// both are treated as "not installed" so install can proceed (idempotent behavior).
 func IsPackageInstalled(packageName string) (bool, error) {
 	output, err := runCommandWithOutput("dpkg-query", "-W", "-f=${Status}", packageName)
 	if err != nil {
@@ -72,7 +75,10 @@ func AutoRemove() error {
 	return nil
 }
 
-// GetInstalledVersion returns the installed version of a package, or empty string if not installed
+// GetInstalledVersion returns the installed version of a package, or empty string if not installed.
+// On any dpkg-query failure (package not found, command error, permission denied),
+// it returns ("", nil). Callers cannot distinguish "not installed" from "query failed";
+// both are treated as "no version" so callers can proceed (e.g., skip or try install).
 func GetInstalledVersion(packageName string) (string, error) {
 	output, err := runCommandWithOutput("dpkg-query", "-W", "-f=${Version}", packageName)
 	if err != nil {

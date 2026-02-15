@@ -39,8 +39,8 @@ ppa ppa:git-core/ppa
 
 `deb` Specifies a full deb repository line to be added to /etc/apt/sources.list.d/.
 Syntax: deb "<full-repository-line>"
-Logic: The tool will create a .list file (e.g., from a hash of the line) in /etc/apt/sources.list.d/ containing the line.
-Note: This directive only adds the repository line. It does not add the GPG key. The key directive must be used separately.
+Logic: The tool creates a DEB822-format .sources file (e.g., apt-bundle-<hash>.sources) in /etc/apt/sources.list.d/.
+Note: This directive only adds the repository line. It does not add the GPG key. The key directive must be used separately. When a key directive precedes a deb directive, the key path is used for the Signed-By field in the DEB822 stanza.
 Example:
 
 ```
@@ -52,9 +52,9 @@ deb "[arch=amd64] [https://download.docker.com/linux/ubuntu](https://download.do
 ```
 
 
-`key` Specifies a GPG key URL to be downloaded and added to /etc/apt/trusted.gpg.d/.
+`key` Specifies a GPG key URL to be downloaded and added to the keyring.
 Syntax: key <url-to-key>
-Logic: The tool will download the key, dearmor it, and save it to /etc/apt/trusted.gpg.d/<filename>.gpg.
+Logic: The tool downloads the key, dearmors it if needed, and saves it to /etc/apt/keyrings/ (e.g., apt-bundle-<hash>.gpg). The key path is used for the Signed-By field when adding deb repositories, scoping trust to that repository rather than globally.
 Example:
 
 ```
