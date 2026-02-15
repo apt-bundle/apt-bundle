@@ -13,7 +13,12 @@ var dumpCmd = &cobra.Command{
 	Use:   "dump",
 	Short: "Generate an Aptfile from the current system state",
 	Long: `Dump generates an Aptfile by listing all manually installed packages
-and optionally custom PPAs and repositories from the system.`,
+and optionally custom PPAs and repositories from the system.
+
+Limitation: Repositories that use Signed-By (GPG keys) are emitted as deb lines
+only. The corresponding key directive is not included, since dump reads from
+.sources files which store key paths, not URLs. When installing from a dumped
+Aptfile, you may need to add key directives manually for custom repositories.`,
 	RunE: runDump,
 }
 

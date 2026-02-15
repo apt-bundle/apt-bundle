@@ -1,5 +1,15 @@
 # Technical Specification: apt-bundle
 
+## Implementation Overview
+
+apt-bundle uses modern APT conventions:
+
+- **Custom repositories:** Stored as DEB822-format `.sources` files in `/etc/apt/sources.list.d/` (not legacy `.list` one-line format).
+- **GPG keys:** Stored in `/etc/apt/keyrings/` (not `/etc/apt/trusted.gpg.d/`). Keys are scoped per-repository via the `Signed-By` field in DEB822 stanzas, rather than globally trusted.
+- **Key URLs:** Only `https://` URLs are accepted; `http://` and `file://` are rejected for security.
+
+---
+
 ## Part 1: Aptfile Specification
 
 ### Overview

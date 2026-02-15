@@ -158,7 +158,8 @@ func readListFile(path string) ([]SourceEntry, error) {
 	return entries, sc.Err()
 }
 
-// readDEB822File parses a DEB822 .sources file and returns Aptfile entries (deb only; PPA not in .sources typically)
+// readDEB822File parses a DEB822 .sources file and returns Aptfile entries (deb only; PPA not in .sources typically).
+// Only single-stanza files are supported; files with multiple stanzas (blank-line separated) yield only the last stanza.
 func readDEB822File(path string) ([]SourceEntry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

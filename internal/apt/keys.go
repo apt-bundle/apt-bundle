@@ -13,11 +13,14 @@ import (
 )
 
 const (
-	// KeyringDir is where apt-bundle stores GPG keys (scoped to repos, not globally trusted)
+	// KeyringDir is the default path where apt-bundle stores GPG keys (scoped to repos, not globally trusted)
 	KeyringDir = "/etc/apt/keyrings"
 	// KeyPrefix is the prefix for apt-bundle managed key files
 	KeyPrefix = "apt-bundle-"
 )
+
+// keyringDir is the overridable keyring directory (for testing)
+var keyringDir = KeyringDir
 
 // validateKeyURL ensures the URL uses https://. Rejects http://, file://, and other schemes.
 func validateKeyURL(keyURL string) error {
@@ -43,11 +46,19 @@ func validateKeyURL(keyURL string) error {
 func KeyPathForURL(keyURL string) string {
 	hash := sha256.Sum256([]byte(keyURL))
 	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
-	return filepath.Join(KeyringDir, filename)
+	return filepath.Join(keyringDir, filename)
 }
 
-// keyHTTPClient is used for key downloads; has timeout to avoid hanging
-var keyHTTPClient = &http.Client{Timeout: 30 * time.Second}
+// keyHTTPClient is used for key downloads; has timeout and enforces HTTPS on redirects
+var keyHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return fmt.Errorf("redirect to non-HTTPS URL rejected for security: %s", req.URL)
+		}
+		return nil
+	},
+}
 
 // httpGet is the function used to make HTTP requests (overridable for testing)
 var httpGet = keyHTTPClient.Get
@@ -64,7 +75,7 @@ func AddGPGKey(keyURL string) (string, error) {
 
 	hash := sha256.Sum256([]byte(keyURL))
 	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
-	keyPath := filepath.Join(KeyringDir, filename)
+	keyPath := filepath.Join(keyringDir, filename)
 
 	// Check if key already exists (idempotency)
 	if _, err := os.Stat(keyPath); err == nil {
@@ -73,7 +84,7 @@ func AddGPGKey(keyURL string) (string, error) {
 	}
 
 	// Ensure the keyring directory exists
-	if err := os.MkdirAll(KeyringDir, 0755); err != nil {
+	if err := os.MkdirAll(keyringDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create keyring directory: %w", err)
 	}
 
@@ -164,4 +175,14 @@ func SetHTTPGet(f func(string) (*http.Response, error)) {
 // ResetHTTPGet resets the HTTP get function to default (for testing only)
 func ResetHTTPGet() {
 	httpGet = keyHTTPClient.Get
+}
+
+// SetKeyringDir sets the keyring directory (for testing only)
+func SetKeyringDir(path string) {
+	keyringDir = path
+}
+
+// ResetKeyringDir resets the keyring directory to default (for testing only)
+func ResetKeyringDir() {
+	keyringDir = KeyringDir
 }

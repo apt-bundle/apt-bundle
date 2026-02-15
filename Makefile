@@ -61,10 +61,10 @@ clean:
 	@rm -f coverage.out coverage.html
 	@echo "✓ Clean complete"
 
-# Run tests
+# Run tests (aligned with CI: -race for data race detection, -p 1 to avoid cross-package races on shared globals)
 test:
 	@echo "Running tests..."
-	$(GO) test -v ./...
+	$(GO) test -v -race -p 1 ./...
 
 # Run tests with coverage
 test-coverage:

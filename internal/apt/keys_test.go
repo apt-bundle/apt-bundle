@@ -16,6 +16,13 @@ func TestAddGPGKey(t *testing.T) {
 	t.Run("successful key download - binary key", func(t *testing.T) {
 		defer ResetHTTPGet()
 		defer ResetExecutor()
+		defer ResetKeyringDir()
+
+		keyringPath := filepath.Join(tmpDir, "keyrings")
+		if err := os.MkdirAll(keyringPath, 0755); err != nil {
+			t.Fatalf("Failed to create keyring dir: %v", err)
+		}
+		SetKeyringDir(keyringPath)
 
 		binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04}
 		SetHTTPGet(func(url string) (*http.Response, error) {
@@ -25,16 +32,15 @@ func TestAddGPGKey(t *testing.T) {
 			}, nil
 		})
 
-		keyringPath := filepath.Join(tmpDir, "keyrings")
-		if err := os.MkdirAll(keyringPath, 0755); err != nil {
-			t.Fatalf("Failed to create keyring dir: %v", err)
-		}
-
 		keyPath, err := AddGPGKey("https://example.com/key.gpg")
 		if err != nil {
-			t.Logf("AddGPGKey failed (expected in test environment): %v", err)
-		} else {
-			t.Logf("Key path: %s", keyPath)
+			t.Fatalf("AddGPGKey failed: %v", err)
+		}
+		if keyPath == "" {
+			t.Error("Expected non-empty key path")
+		}
+		if _, err := os.Stat(keyPath); err != nil {
+			t.Errorf("Key file should exist at %s: %v", keyPath, err)
 		}
 	})
 

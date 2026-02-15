@@ -124,6 +124,8 @@ apt-bundle outdated
 apt-bundle dump > Aptfile
 ```
 
+Note: `dump` emits repository lines but not key directives for repos that use Signed-By; you may need to add those manually when installing from a dumped Aptfile.
+
 ### Aptfile Format
 
 The `Aptfile` is a simple line-oriented text file with the following directives:
