@@ -95,11 +95,24 @@ func TestRunInstall(t *testing.T) {
 	})
 
 	t.Run("with valid aptfile as root", func(t *testing.T) {
-		if os.Geteuid() != 0 {
-			t.Skip("Skipping test - requires root privileges")
+		// Use mock to avoid depending on real apt (fails in Docker/CI without apt sources)
+		cleanup := setupMockRoot()
+		defer cleanup()
+
+		mock := testutil.NewMockExecutor()
+		mock.RunFunc = func(name string, args ...string) error {
+			return nil
 		}
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+			return nil, errors.New("package not found")
+		}
+		apt.SetExecutor(mock)
+		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
+		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
+		defer apt.ResetStatePath()
+
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\napt git\n"
 

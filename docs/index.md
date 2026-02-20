@@ -61,6 +61,6 @@ Use `apt-bundle check` to validate that the build environment has the necessary 
 - [Installation](installation.html) - How to install apt-bundle
 - [Usage](usage.html) - Command reference and examples
 - [Aptfile Format](aptfile-format.html) - Complete syntax reference
-- [Developer Guide](developer-guide.html) - Contributing and development setup
+- [Contributing](contributing.html) - Contributing and development setup
 - [API Reference](api-reference.html) - Go package documentation
 

@@ -28,6 +28,9 @@ func IsPackageInstalled(packageName string) (bool, error) {
 
 // InstallPackage installs a package using apt-get
 func InstallPackage(packageName string) error {
+	if packageName == "" {
+		return fmt.Errorf("package name cannot be empty")
+	}
 	fmt.Printf("Installing package: %s\n", packageName)
 
 	if err := runCommand("apt-get", "install", "-y", packageName); err != nil {

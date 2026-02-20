@@ -194,5 +194,5 @@ Common errors:
 
 - Learn about the [Aptfile Format](aptfile-format.html) for detailed syntax
 - See [Installation](installation.html) if you haven't installed yet
-- Check out the [Developer Guide](developer-guide.html) to contribute
+- Check out the [Contributing](contributing.html) guide to contribute
 

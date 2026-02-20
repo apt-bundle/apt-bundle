@@ -68,4 +68,15 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -race -v ./...
+        run: |
+          go test -race -v -p 1 -failfast ./... > test-output.log 2>&1
+          exit_code=$?
+          cat test-output.log
+          exit $exit_code
+
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.log

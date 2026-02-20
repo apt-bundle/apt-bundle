@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-coverage test-coverage-html fmt vet lint help package release-test ci-test install-hooks
+.PHONY: build install clean test test-coverage test-coverage-html test-docker fmt vet lint help package release-test ci-build install-hooks
 
 BINARY_NAME=apt-bundle
 BUILD_DIR=build
@@ -23,7 +23,8 @@ help:
 	@echo "  lint                - Run golangci-lint"
 	@echo "  deps                - Download and tidy dependencies"
 	@echo "  package             - Build .deb packages locally using nfpm"
-	@echo "  ci-test             - Test CI build step locally (mimics GitHub Actions)"
+	@echo "  ci-build            - Build and package like CI release job (cross-arch)"
+	@echo "  test-docker         - Run tests in Docker (replicates CI ubuntu-latest)"
 	@echo "  release-test        - Test release workflow locally (dry-run)"
 	@echo "  install-hooks       - Install git pre-commit hook (format, lint, build)"
 	@echo "  help                - Show this help message"
@@ -128,9 +129,22 @@ package: build
 	done
 	@echo "✓ Packages built in dist/"
 
-# Test CI build step locally (mimics GitHub Actions build job)
-# Usage: make ci-test [ARCH=amd64] [VERSION=0.1.0]
-ci-test:
+# Run tests in Docker to replicate CI environment (ubuntu-latest)
+# Use when tests pass locally but fail in CI
+# Uses Ubuntu + Go to match GitHub Actions runner (golang image is Debian-based and lacks tools)
+test-docker:
+	@echo "Running tests in Docker (CI-like environment, Ubuntu + Go 1.23)..."
+	@docker run --rm -v "$$(pwd)":/app -w /app ubuntu:22.04 bash -c '\
+		apt-get update -qq && apt-get install -y -qq ca-certificates wget gcc && \
+		GOARCH=$$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && \
+		wget -q "https://go.dev/dl/go1.23.0.linux-$${GOARCH}.tar.gz" -O /tmp/go.tar.gz && \
+		tar -C /usr/local -xzf /tmp/go.tar.gz && \
+		export PATH=/usr/local/go/bin:$$PATH && \
+		cd /app && go test -race -v -p 1 -failfast ./...'
+
+# Build and package like CI release job (mimics GitHub Actions build step)
+# Usage: make ci-build [ARCH=amd64] [VERSION=0.1.0]
+ci-build:
 	@echo "Testing CI build step locally..."
 	@if ! command -v nfpm >/dev/null 2>&1; then \
 		echo "Installing nfpm..."; \

@@ -124,7 +124,7 @@ godoc -http=:6060
 
 ## Related Documentation
 
-- [Developer Guide](developer-guide.html) - Development setup and workflow
+- [Contributing](contributing.html) - Development setup and workflow
 - [Technical Specification](https://github.com/apt-bundle/apt-bundle/blob/main/specs/tech-specs.md) - Internal specification
 - [Requirements](https://github.com/apt-bundle/apt-bundle/blob/main/specs/requirements.md) - Internal specification
 
