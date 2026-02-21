@@ -80,6 +80,8 @@ func collectOutdated(aptFilePath string) (outdated []OutdatedEntry, numApt int, 
 }
 
 func runOutdated(cmd *cobra.Command, args []string) error {
+	w := cmd.OutOrStdout()
+
 	outdated, numApt, err := collectOutdated(aptfilePath)
 	if err != nil {
 		return err
@@ -87,13 +89,13 @@ func runOutdated(cmd *cobra.Command, args []string) error {
 
 	if len(outdated) == 0 {
 		if numApt == 0 {
-			fmt.Println("No apt packages in Aptfile.")
+			fmt.Fprintln(w, "No apt packages in Aptfile.")
 		}
 		return nil
 	}
 
 	for _, e := range outdated {
-		fmt.Printf("%s (installed: %s, available: %s)\n", e.Name, e.Installed, e.Candidate)
+		fmt.Fprintf(w, "%s (installed: %s, available: %s)\n", e.Name, e.Installed, e.Candidate)
 	}
 	return fmt.Errorf("%d package(s) have upgrades available", len(outdated))
 }

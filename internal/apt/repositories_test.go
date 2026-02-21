@@ -452,11 +452,24 @@ func TestLookPathField(t *testing.T) {
 }
 
 func BenchmarkAddPPA(b *testing.B) {
-	if _, err := exec.LookPath("add-apt-repository"); err != nil {
-		b.Skip("add-apt-repository not available, skipping benchmark")
+	// Use a fake os-release so isUbuntu() doesn't read the real file
+	dir := b.TempDir()
+	f := filepath.Join(dir, "os-release")
+	_ = os.WriteFile(f, []byte("ID=ubuntu\n"), 0644)
+
+	mock := testutil.NewMockExecutor()
+	mock.RunFunc = func(name string, args ...string) error {
+		return nil
 	}
 
-	m := NewAptManager()
+	m := &AptManager{
+		Executor:      mock,
+		OsReleasePath: f,
+		LookPath: func(file string) (string, error) {
+			return "/usr/bin/add-apt-repository", nil
+		},
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = m.AddPPA("ppa:test/ppa")

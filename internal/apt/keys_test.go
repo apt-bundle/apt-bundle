@@ -157,9 +157,24 @@ func TestKeyPathForURL(t *testing.T) {
 }
 
 func BenchmarkAddGPGKey(b *testing.B) {
-	m := NewAptManager()
+	keyringPath := b.TempDir()
+
+	binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04}
+	m := &AptManager{
+		KeyringDir: keyringPath,
+		HTTPGet: func(url string) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(string(binaryKeyData))),
+			}, nil
+		},
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		// Remove key file each iteration so AddGPGKey doesn't short-circuit on idempotency check
+		_ = os.RemoveAll(keyringPath)
+		_ = os.MkdirAll(keyringPath, 0755)
 		_, _ = m.AddGPGKey("https://example.com/key.gpg")
 	}
 }

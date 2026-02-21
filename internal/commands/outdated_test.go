@@ -58,24 +58,12 @@ func TestRunOutdated(t *testing.T) {
 		mgr = &apt.AptManager{Executor: mock}
 		defer func() { mgr = origMgr }()
 
-		r, w, err := os.Pipe()
-		if err != nil {
-			t.Fatal(err)
-		}
-		oldOut, oldErr := os.Stdout, os.Stderr
-		os.Stdout, os.Stderr = w, w
-		defer func() { os.Stdout, os.Stderr = oldOut, oldErr; w.Close() }()
-
 		var buf bytes.Buffer
-		done := make(chan struct{})
-		go func() {
-			_, _ = buf.ReadFrom(r)
-			close(done)
-		}()
+		outdatedCmd.SetOut(&buf)
+		outdatedCmd.SetErr(&buf)
+		defer func() { outdatedCmd.SetOut(nil); outdatedCmd.SetErr(nil) }()
 
-		err = runOutdated(outdatedCmd, nil)
-		w.Close()
-		<-done
+		err := runOutdated(outdatedCmd, nil)
 		if err != nil {
 			t.Fatalf("runOutdated: %v", err)
 		}
