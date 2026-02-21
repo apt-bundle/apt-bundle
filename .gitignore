@@ -49,5 +49,9 @@ docs/Gemfile.lock
 
 crash.log
 crash.*.log
+<<<<<<< Updated upstream
 
 .claude/settings.local.json
+=======
+.worktrees/
+>>>>>>> Stashed changes

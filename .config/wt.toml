@@ -1,0 +1,8 @@
+# Worktrunk project config for apt-bundle
+# See: https://worktrunk.dev/hook/
+
+# Copy Claude Code settings into new worktrees so agents don't get permission
+# prompts. settings.local.json is untracked, so it won't be present in a fresh
+# worktree without this step.
+[post-create]
+claude-settings = "cp {{ base_worktree_path }}/.claude/settings.local.json {{ worktree_path }}/.claude/settings.local.json 2>/dev/null || true"
