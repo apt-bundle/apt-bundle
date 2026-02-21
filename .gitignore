@@ -49,3 +49,5 @@ docs/Gemfile.lock
 
 crash.log
 crash.*.log
+
+.claude/settings.json
