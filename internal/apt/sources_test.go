@@ -252,3 +252,35 @@ Suites: jammy
 		})
 	}
 }
+
+func TestReadDEB822FileMultiStanza(t *testing.T) {
+	content := `Types: deb
+URIs: https://repo-a.example.com/apt
+Suites: focal
+Components: main
+
+Types: deb
+URIs: https://repo-b.example.com/apt
+Suites: jammy
+Components: stable
+Architectures: amd64
+`
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "multi.sources")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := readDEB822File(path)
+	if err != nil {
+		t.Fatalf("readDEB822File: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries for multi-stanza file, got %d", len(entries))
+	}
+	if entries[0].AptfileLine != "deb https://repo-a.example.com/apt focal main" {
+		t.Errorf("stanza 1: got %q", entries[0].AptfileLine)
+	}
+	if entries[1].AptfileLine != "deb [arch=amd64] https://repo-b.example.com/apt jammy stable" {
+		t.Errorf("stanza 2: got %q", entries[1].AptfileLine)
+	}
+}

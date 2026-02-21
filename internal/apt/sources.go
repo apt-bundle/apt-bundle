@@ -89,7 +89,7 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 		return nil, fmt.Errorf("reading %s: %w", sourcesListPath, err)
 	}
 	if err == nil {
-		lines := strings.Split(string(data), "\n")
+		lines, _ := splitLines(string(data))
 		for _, line := range lines {
 			if e, ok := parseDebLineToSource(line); ok && !seen[e.AptfileLine] {
 				seen[e.AptfileLine] = true
@@ -164,15 +164,43 @@ func readListFile(path string) ([]SourceEntry, error) {
 }
 
 // readDEB822File parses a DEB822 .sources file and returns Aptfile entries (deb only; PPA not in .sources typically).
-// Only single-stanza files are supported; files with multiple stanzas (blank-line separated) yield only the last stanza.
+// Supports multi-stanza files where stanzas are separated by blank lines.
 func readDEB822File(path string) ([]SourceEntry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	// Simple key-value parse: Types, URIs, Suites, Components, Architectures
+
+	lines, _ := splitLines(string(data))
+	var entries []SourceEntry
+	var stanzaLines []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			if len(stanzaLines) > 0 {
+				if entry, ok := parseDEB822Stanza(stanzaLines); ok {
+					entries = append(entries, entry)
+				}
+				stanzaLines = nil
+			}
+			continue
+		}
+		stanzaLines = append(stanzaLines, line)
+	}
+	// Handle final stanza (no trailing blank line)
+	if len(stanzaLines) > 0 {
+		if entry, ok := parseDEB822Stanza(stanzaLines); ok {
+			entries = append(entries, entry)
+		}
+	}
+
+	return entries, nil
+}
+
+// parseDEB822Stanza parses a single DEB822 stanza (key-value pairs) into a SourceEntry.
+func parseDEB822Stanza(lines []string) (SourceEntry, bool) {
 	var types, uris, suites, components, architectures string
-	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -196,10 +224,10 @@ func readDEB822File(path string) ([]SourceEntry, error) {
 		}
 	}
 	if uris == "" || suites == "" {
-		return nil, nil
+		return SourceEntry{}, false
 	}
 	if isDefaultURI(uris) {
-		return nil, nil
+		return SourceEntry{}, false
 	}
 	// Build deb line: [arch=X] URI Suite Components
 	debType := "deb"
@@ -214,5 +242,5 @@ func readDEB822File(path string) ([]SourceEntry, error) {
 	if components != "" {
 		line += " " + components
 	}
-	return []SourceEntry{{Type: "deb", AptfileLine: line}}, nil
+	return SourceEntry{Type: "deb", AptfileLine: line}, true
 }

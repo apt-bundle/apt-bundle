@@ -92,7 +92,7 @@ func TestRunCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("doCheck returns error when package check fails", func(t *testing.T) {
+	t.Run("doCheck treats dpkg-query error as not-installed", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		if err := os.WriteFile(tmpFile, []byte("apt somepkg\n"), 0644); err != nil {
@@ -110,9 +110,15 @@ func TestRunCheck(t *testing.T) {
 		mgr = &apt.AptManager{Executor: mock}
 		defer func() { mgr = origMgr }()
 
-		_, _, _, err := doCheck(tmpFile)
-		if err == nil {
-			t.Error("expected doCheck to return error when dpkg-query fails")
+		ok, missing, _, err := doCheck(tmpFile)
+		if err != nil {
+			t.Fatalf("doCheck should not return error for dpkg-query failure: %v", err)
+		}
+		if ok {
+			t.Error("expected ok=false")
+		}
+		if len(missing) != 1 || missing[0] != "somepkg" {
+			t.Errorf("expected missing=[somepkg], got %v", missing)
 		}
 	})
 

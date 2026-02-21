@@ -54,10 +54,7 @@ func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.E
 		case aptfile.EntryTypeApt:
 			pkgName := aptfile.ExtractPkgName(entry.Value)
 			installed, err := mgr.IsPackageInstalled(pkgName)
-			if err != nil {
-				return false, nil, nil, fmt.Errorf("check package %s: %w", pkgName, err)
-			}
-			if !installed {
+			if err != nil || !installed {
 				missing = append(missing, pkgName)
 			}
 

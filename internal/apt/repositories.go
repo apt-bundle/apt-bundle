@@ -17,15 +17,33 @@ const (
 	SourcesPrefix = "apt-bundle-"
 )
 
-// isUbuntu checks if the current system is Ubuntu by reading /etc/os-release
+// isUbuntu checks if the current system is Ubuntu by reading /etc/os-release.
+// Parses key=value pairs properly to avoid false positives from fields like
+// PRETTY_NAME or derivative distro IDs.
 func (m *AptManager) isUbuntu() bool {
 	data, err := os.ReadFile(m.OsReleasePath)
 	if err != nil {
 		return false
 	}
-	content := string(data)
-	return strings.Contains(content, "ID=ubuntu") ||
-		strings.Contains(content, "ID_LIKE=ubuntu")
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		key, val, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		val = strings.Trim(val, "\"")
+		if key == "ID" && val == "ubuntu" {
+			return true
+		}
+		if key == "ID_LIKE" {
+			for _, word := range strings.Fields(val) {
+				if word == "ubuntu" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // AddPPA adds a PPA repository using add-apt-repository

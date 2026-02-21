@@ -47,6 +47,39 @@ func TestIsUbuntu(t *testing.T) {
 		}
 	})
 
+	t.Run("ID_LIKE with multiple values returns true", func(t *testing.T) {
+		f := filepath.Join(dir, "os-release-pop")
+		if err := os.WriteFile(f, []byte("ID=pop\nID_LIKE=\"ubuntu debian\"\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		m := &AptManager{OsReleasePath: f}
+		if !m.isUbuntu() {
+			t.Error("expected isUbuntu() true for ID_LIKE containing ubuntu")
+		}
+	})
+
+	t.Run("PRETTY_NAME containing ubuntu does not false-match", func(t *testing.T) {
+		f := filepath.Join(dir, "os-release-pretty")
+		if err := os.WriteFile(f, []byte("PRETTY_NAME=\"Something ubuntu-based\"\nID=custom\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		m := &AptManager{OsReleasePath: f}
+		if m.isUbuntu() {
+			t.Error("expected isUbuntu() false when only PRETTY_NAME contains ubuntu")
+		}
+	})
+
+	t.Run("ID=ubuntu-derived does not match", func(t *testing.T) {
+		f := filepath.Join(dir, "os-release-derived")
+		if err := os.WriteFile(f, []byte("ID=ubuntu-derived\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		m := &AptManager{OsReleasePath: f}
+		if m.isUbuntu() {
+			t.Error("expected isUbuntu() false for ID=ubuntu-derived")
+		}
+	})
+
 	t.Run("missing file returns false", func(t *testing.T) {
 		m := &AptManager{OsReleasePath: filepath.Join(dir, "nonexistent")}
 		if m.isUbuntu() {

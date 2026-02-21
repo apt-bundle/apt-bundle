@@ -38,8 +38,13 @@ func init() {
 }
 
 func runCleanup(cmd *cobra.Command, args []string) error {
+	return doCleanup(cleanupForce, cleanupZap, cleanupAutoremove)
+}
+
+// doCleanup performs cleanup with explicit parameters, avoiding mutation of package-level flags.
+func doCleanup(force, zap, autoremove bool) error {
 	// Check for root privileges if actually removing packages
-	if cleanupForce {
+	if force {
 		if err := checkRoot(); err != nil {
 			return err
 		}
@@ -58,7 +63,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 
 	var packagesToRemove []string
 
-	if cleanupZap {
+	if zap {
 		// Zap mode: remove ALL packages not in Aptfile
 		packagesToRemove, err = getPackagesToZap(aptfilePackages)
 		if err != nil {
@@ -78,7 +83,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display what will be removed
-	if cleanupZap {
+	if zap {
 		fmt.Printf("\n⚠️  ZAP MODE: The following %d packages are NOT in your Aptfile and will be removed:\n", len(packagesToRemove))
 	} else {
 		fmt.Printf("\nThe following %d packages were installed by apt-bundle but are no longer in your Aptfile:\n", len(packagesToRemove))
@@ -89,13 +94,13 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println()
 
-	if !cleanupForce {
+	if !force {
 		fmt.Println("Run with --force to actually remove these packages")
 		return nil
 	}
 
 	// If zap mode, require explicit confirmation
-	if cleanupZap {
+	if zap {
 		fmt.Print("⚠️  WARNING: This will remove packages that may be critical to your system.\n")
 		fmt.Print("Type 'yes' to confirm: ")
 
@@ -135,7 +140,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	fmt.Printf("✓ Removed %d packages\n", len(packagesToRemove))
 
 	// Run autoremove if requested
-	if cleanupAutoremove {
+	if autoremove {
 		if err := mgr.AutoRemove(); err != nil {
 			return fmt.Errorf("failed to autoremove: %w", err)
 		}
