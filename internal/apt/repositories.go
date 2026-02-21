@@ -17,6 +17,12 @@ const (
 	SourcesPrefix = "apt-bundle-"
 )
 
+// optionsRegex matches bracketed options like [arch=amd64] at the start of a deb line
+var optionsRegex = regexp.MustCompile(`^\[([^\]]+)\]\s*`)
+
+// archRegex extracts the arch=value from deb line options
+var archRegex = regexp.MustCompile(`arch=([^\s]+)`)
+
 // lookPath is the function used to look up command paths (overridable for testing)
 var lookPath = exec.LookPath
 
@@ -139,13 +145,11 @@ func parseDebLine(line string) (*DebRepository, error) {
 	}
 
 	// Extract options in brackets [key=value key2=value2]
-	optionsRegex := regexp.MustCompile(`^\[([^\]]+)\]\s*`)
 	if matches := optionsRegex.FindStringSubmatch(line); len(matches) > 1 {
 		options := matches[1]
 		line = optionsRegex.ReplaceAllString(line, "")
 
 		// Parse arch option
-		archRegex := regexp.MustCompile(`arch=([^\s]+)`)
 		if archMatches := archRegex.FindStringSubmatch(options); len(archMatches) > 1 {
 			repo.Architectures = archMatches[1]
 		}
