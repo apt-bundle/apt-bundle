@@ -2,6 +2,8 @@ package apt
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -82,7 +84,11 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 	seen := make(map[string]bool)
 
 	// Read main sources.list
-	if data, err := os.ReadFile(sourcesListPath); err == nil {
+	data, err := os.ReadFile(sourcesListPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("reading %s: %w", sourcesListPath, err)
+	}
+	if err == nil {
 		lines := strings.Split(string(data), "\n")
 		for _, line := range lines {
 			if e, ok := parseDebLineToSource(line); ok && !seen[e.AptfileLine] {
@@ -91,7 +97,6 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 			}
 		}
 	}
-	// Ignore read error (e.g. missing file)
 
 	// Read sources.list.d
 	dirEntries, err := os.ReadDir(sourcesDir)
@@ -110,7 +115,7 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 		if strings.HasSuffix(name, ".list") {
 			listEntries, err := readListFile(path)
 			if err != nil {
-				continue
+				return nil, fmt.Errorf("reading %s: %w", path, err)
 			}
 			for _, e := range listEntries {
 				if !seen[e.AptfileLine] {
@@ -121,7 +126,7 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 		} else {
 			sourceEntries, err := readDEB822File(path)
 			if err != nil {
-				continue
+				return nil, fmt.Errorf("reading %s: %w", path, err)
 			}
 			for _, e := range sourceEntries {
 				if !seen[e.AptfileLine] {

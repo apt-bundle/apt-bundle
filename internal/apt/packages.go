@@ -128,7 +128,10 @@ func GetAllInstalledPackages() ([]string, error) {
 	}
 
 	// Split output by newlines and filter empty strings
-	lines := splitLines(string(output))
+	lines, err := splitLines(string(output))
+	if err != nil {
+		return nil, fmt.Errorf("parsing installed packages output: %w", err)
+	}
 	var packages []string
 	for _, line := range lines {
 		if line != "" {
@@ -140,11 +143,11 @@ func GetAllInstalledPackages() ([]string, error) {
 }
 
 // splitLines splits a string by newlines, handling both \n and \r\n
-func splitLines(s string) []string {
+func splitLines(s string) ([]string, error) {
 	var lines []string
 	sc := bufio.NewScanner(strings.NewReader(s))
 	for sc.Scan() {
 		lines = append(lines, sc.Text())
 	}
-	return lines
+	return lines, sc.Err()
 }

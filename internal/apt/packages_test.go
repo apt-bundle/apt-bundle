@@ -91,7 +91,10 @@ func TestSplitLines(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := splitLines(tt.input)
+			got, err := splitLines(tt.input)
+			if err != nil {
+				t.Fatalf("splitLines() unexpected error: %v", err)
+			}
 			if len(got) != len(tt.want) {
 				t.Errorf("splitLines() got %d lines, want %d", len(got), len(tt.want))
 				return

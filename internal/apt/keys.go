@@ -131,20 +131,20 @@ func dearmorKey(data []byte) ([]byte, error) {
 	// Create a temp file for the armored key
 	tmpFile, err := os.CreateTemp("", "apt-bundle-key-*.asc")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create temp file for dearmor: %w", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
 	if _, err := tmpFile.Write(data); err != nil {
 		tmpFile.Close()
-		return nil, err
+		return nil, fmt.Errorf("write armored key to temp file: %w", err)
 	}
 	tmpFile.Close()
 
 	// Create a temp file for the dearmored output
 	outFile, err := os.CreateTemp("", "apt-bundle-key-*.gpg")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create temp output file for dearmor: %w", err)
 	}
 	outPath := outFile.Name()
 	outFile.Close()
