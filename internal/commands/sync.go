@@ -46,15 +46,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	// Run cleanup with force so removal actually happens (sync is not dry-run)
-	origForce := cleanupForce
-	origAutoremove := cleanupAutoremove
-	cleanupForce = true
-	cleanupAutoremove = syncAutoremove
-	defer func() {
-		cleanupForce = origForce
-		cleanupAutoremove = origAutoremove
-	}()
-	return runCleanup(cmd, args)
+	return doCleanup(true, false, syncAutoremove)
 }
 
 func runSyncDryRun() error {

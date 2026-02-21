@@ -87,7 +87,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("failed to add repository: %w", err)
 			}
 			state.AddRepository(sourcePath)
-			// Keep pendingKeyPath for subsequent deb/deb-src lines from same repo
+			pendingKeyPath = "" // Clear after consumption to avoid stale association
 			reposAdded = true
 		}
 	}
