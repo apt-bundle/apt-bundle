@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// EntryType represents the kind of directive in an Aptfile (e.g. "apt", "ppa", "deb", "key").
+// EntryType represents the kind of directive in an Aptfile line (apt, ppa, deb, or key).
 type EntryType string
 
 const (
@@ -17,7 +17,9 @@ const (
 	EntryTypeKey EntryType = "key"
 )
 
-// Entry represents a single parsed line from an Aptfile.
+// Entry represents a single parsed directive from an Aptfile, including
+// the directive type, its argument value, the source line number, and
+// the original unparsed line text.
 type Entry struct {
 	Type     EntryType
 	Value    string
@@ -25,6 +27,8 @@ type Entry struct {
 	Original string
 }
 
+// Parse reads an Aptfile at the given path and returns the list of entries.
+// Blank lines and comment lines (starting with #) are skipped.
 func Parse(filePath string) ([]Entry, error) {
 	file, err := os.Open(filePath)
 	if err != nil {

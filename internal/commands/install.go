@@ -85,7 +85,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("failed to add repository: %w", err)
 			}
 			state.AddRepository(sourcePath)
-			// Keep pendingKeyPath for subsequent deb/deb-src lines from same repo
+			// pendingKeyPath is intentionally not cleared here so that consecutive
+			// deb lines can share the same GPG key. Note: it persists until the
+			// next "key" directive, so unrelated deb entries that appear after a
+			// key block will also inherit that key path.
 			reposAdded = true
 		}
 	}
