@@ -11,7 +11,6 @@ import (
 
 func TestAddGPGKey(t *testing.T) {
 	tmpDir := t.TempDir()
-	_ = tmpDir
 
 	t.Run("successful key download - binary key", func(t *testing.T) {
 		defer ResetHTTPGet()
@@ -162,8 +161,25 @@ func TestSetHTTPGet(t *testing.T) {
 }
 
 func BenchmarkAddGPGKey(b *testing.B) {
+	defer ResetHTTPGet()
+	defer ResetKeyringDir()
+
+	keyringPath := b.TempDir()
+	SetKeyringDir(keyringPath)
+
+	binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04}
+	SetHTTPGet(func(url string) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(string(binaryKeyData))),
+		}, nil
+	})
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		// Remove key file each iteration so AddGPGKey doesn't short-circuit on idempotency check
+		os.RemoveAll(keyringPath)
+		os.MkdirAll(keyringPath, 0755)
 		_, _ = AddGPGKey("https://example.com/key.gpg")
 	}
 }
