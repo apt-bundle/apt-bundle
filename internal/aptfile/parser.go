@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// EntryType represents the kind of directive in an Aptfile (e.g. "apt", "ppa", "deb", "key").
 type EntryType string
 
 const (
@@ -16,6 +17,7 @@ const (
 	EntryTypeKey EntryType = "key"
 )
 
+// Entry represents a single parsed line from an Aptfile.
 type Entry struct {
 	Type     EntryType
 	Value    string

@@ -24,11 +24,6 @@ type State struct {
 	Keys         []string `json:"keys"`
 }
 
-// statePath is the function used to get the state file path (overridable for testing)
-var statePath = func() string {
-	return filepath.Join(StateDir, StateFile)
-}
-
 // NewState creates a new empty state
 func NewState() *State {
 	return &State{
@@ -40,8 +35,8 @@ func NewState() *State {
 }
 
 // LoadState loads the state from disk, or returns a new state if none exists
-func LoadState() (*State, error) {
-	path := statePath()
+func (m *AptManager) LoadState() (*State, error) {
+	path := m.StatePath()
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -59,9 +54,9 @@ func LoadState() (*State, error) {
 	return &state, nil
 }
 
-// Save persists the state to disk
-func (s *State) Save() error {
-	path := statePath()
+// SaveState persists the state to disk
+func (m *AptManager) SaveState(s *State) error {
+	path := m.StatePath()
 
 	// Ensure the directory exists
 	dir := filepath.Dir(path)
@@ -158,18 +153,4 @@ func (s *State) GetPackagesNotIn(packages []string) []string {
 		}
 	}
 	return result
-}
-
-// SetStatePath sets the state file path (for testing only)
-func SetStatePath(path string) {
-	statePath = func() string {
-		return path
-	}
-}
-
-// ResetStatePath resets the state path to the default (for testing only)
-func ResetStatePath() {
-	statePath = func() string {
-		return filepath.Join(StateDir, StateFile)
-	}
 }

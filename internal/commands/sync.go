@@ -89,7 +89,7 @@ func runSyncDryRun() error {
 
 // syncDryRunPlan returns packages that would be installed and that would be removed
 func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string, err error) {
-	state, err := apt.LoadState()
+	state, err := mgr.LoadState()
 	if err != nil {
 		return nil, nil, fmt.Errorf("load state: %w", err)
 	}
@@ -108,7 +108,7 @@ func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string
 			continue
 		}
 		pkgName := aptfile.ExtractPkgName(entry.Value)
-		installed, err := apt.IsPackageInstalled(pkgName)
+		installed, err := mgr.IsPackageInstalled(pkgName)
 		if err != nil || !installed {
 			wouldInstall = append(wouldInstall, entry.Value)
 		}

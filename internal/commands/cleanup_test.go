@@ -39,16 +39,17 @@ func TestExtractPackageNames(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
 
-		apt.SetExecutor(testutil.NewMockExecutor())
-		defer apt.ResetExecutor()
-
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  testutil.NewMockExecutor(),
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		state := apt.NewState()
 		state.AddPackage("nano")
-		if err := state.Save(); err != nil {
+		if err := mgr.SaveState(state); err != nil {
 			t.Fatalf("Failed to save state: %v", err)
 		}
 
@@ -118,14 +119,13 @@ func TestRunCleanupWithMock(t *testing.T) {
 		defer cleanup()
 
 		mock := testutil.NewMockExecutor()
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
-
-		// Setup empty state
 		tmpDir := t.TempDir()
-		stateFile := filepath.Join(tmpDir, "state.json")
-		apt.SetStatePath(stateFile)
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		// Create Aptfile
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
@@ -162,20 +162,20 @@ func TestRunCleanupWithMock(t *testing.T) {
 		defer cleanup()
 
 		mock := testutil.NewMockExecutor()
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		tmpDir := t.TempDir()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		// Setup state with packages
-		tmpDir := t.TempDir()
-		stateFile := filepath.Join(tmpDir, "state.json")
-		apt.SetStatePath(stateFile)
-		defer apt.ResetStatePath()
-
 		state := apt.NewState()
 		state.AddPackage("vim")
 		state.AddPackage("curl")
 		state.AddPackage("git") // This one should be removed
-		if err := state.Save(); err != nil {
+		if err := mgr.SaveState(state); err != nil {
 			t.Fatalf("Failed to save state: %v", err)
 		}
 
@@ -224,20 +224,20 @@ func TestRunCleanupWithMock(t *testing.T) {
 		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		tmpDir := t.TempDir()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		// Setup state with packages
-		tmpDir := t.TempDir()
-		stateFile := filepath.Join(tmpDir, "state.json")
-		apt.SetStatePath(stateFile)
-		defer apt.ResetStatePath()
-
 		state := apt.NewState()
 		state.AddPackage("vim")
 		state.AddPackage("curl")
 		state.AddPackage("git") // This one should be removed
-		if err := state.Save(); err != nil {
+		if err := mgr.SaveState(state); err != nil {
 			t.Fatalf("Failed to save state: %v", err)
 		}
 
@@ -283,7 +283,7 @@ func TestRunCleanupWithMock(t *testing.T) {
 		}
 
 		// Verify state was updated
-		updatedState, err := apt.LoadState()
+		updatedState, err := mgr.LoadState()
 		if err != nil {
 			t.Fatalf("Failed to load state: %v", err)
 		}
@@ -300,19 +300,19 @@ func TestRunCleanupWithMock(t *testing.T) {
 		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		tmpDir := t.TempDir()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		// Setup state with packages
-		tmpDir := t.TempDir()
-		stateFile := filepath.Join(tmpDir, "state.json")
-		apt.SetStatePath(stateFile)
-		defer apt.ResetStatePath()
-
 		state := apt.NewState()
 		state.AddPackage("vim")
 		state.AddPackage("git") // This one should be removed
-		if err := state.Save(); err != nil {
+		if err := mgr.SaveState(state); err != nil {
 			t.Fatalf("Failed to save state: %v", err)
 		}
 
@@ -365,8 +365,11 @@ func TestRunCleanupWithMock(t *testing.T) {
 		}
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt vim\n"
@@ -399,8 +402,11 @@ func TestRunCleanupWithMock(t *testing.T) {
 		defer cleanup()
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "invalid-directive value\n"
@@ -425,9 +431,11 @@ func TestRunCleanupWithMock(t *testing.T) {
 
 func TestGetPackagesToCleanup(t *testing.T) {
 	tmpDir := t.TempDir()
-	stateFile := filepath.Join(tmpDir, "state.json")
-	apt.SetStatePath(stateFile)
-	defer apt.ResetStatePath()
+	origMgr := mgr
+	mgr = &apt.AptManager{
+		StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+	}
+	defer func() { mgr = origMgr }()
 
 	// Setup state
 	state := apt.NewState()
@@ -435,7 +443,7 @@ func TestGetPackagesToCleanup(t *testing.T) {
 	state.AddPackage("curl")
 	state.AddPackage("git")
 	state.AddPackage("htop")
-	if err := state.Save(); err != nil {
+	if err := mgr.SaveState(state); err != nil {
 		t.Fatalf("Failed to save state: %v", err)
 	}
 
@@ -478,8 +486,9 @@ func TestGetPackagesToZap(t *testing.T) {
 		}
 		return nil, nil
 	}
-	apt.SetExecutor(mock)
-	defer apt.ResetExecutor()
+	origMgr := mgr
+	mgr = &apt.AptManager{Executor: mock}
+	defer func() { mgr = origMgr }()
 
 	t.Run("some packages to zap", func(t *testing.T) {
 		toZap, err := getPackagesToZap([]string{"vim", "curl"})

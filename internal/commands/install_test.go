@@ -106,12 +106,14 @@ func TestRunInstall(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\napt git\n"
@@ -155,8 +157,9 @@ func TestRunInstallDryRun(t *testing.T) {
 		}
 		return nil, errors.New("unexpected")
 	}
-	apt.SetExecutor(mock)
-	defer apt.ResetExecutor()
+	origMgr := mgr
+	mgr = &apt.AptManager{Executor: mock}
+	defer func() { mgr = origMgr }()
 
 	installDryRun = true
 	defer func() { installDryRun = false }()
@@ -176,7 +179,6 @@ func TestRunInstallWithMock(t *testing.T) {
 	t.Run("nonexistent aptfile", func(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
-		defer apt.ResetExecutor()
 
 		originalPath := aptfilePath
 		defer func() { aptfilePath = originalPath }()
@@ -191,7 +193,6 @@ func TestRunInstallWithMock(t *testing.T) {
 	t.Run("invalid aptfile", func(t *testing.T) {
 		cleanup := setupMockRoot()
 		defer cleanup()
-		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
@@ -216,12 +217,13 @@ func TestRunInstallWithMock(t *testing.T) {
 		defer cleanup()
 
 		mock := testutil.NewMockExecutor()
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
-
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -255,12 +257,14 @@ func TestRunInstallWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -305,12 +309,14 @@ func TestRunInstallWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -350,13 +356,14 @@ func TestRunInstallWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return []byte("install ok installed"), nil
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -396,13 +403,14 @@ func TestRunInstallWithMock(t *testing.T) {
 			}
 			return nil
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -439,13 +447,14 @@ func TestRunInstallWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()
@@ -481,13 +490,14 @@ func TestRunInstallWithMock(t *testing.T) {
 			checkCalls++
 			return nil, errors.New("dpkg-query failed")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
-		// Setup state path
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		originalNoUpdate := noUpdate
 		defer func() { noUpdate = originalNoUpdate }()

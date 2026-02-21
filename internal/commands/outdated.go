@@ -52,21 +52,21 @@ func collectOutdated(aptFilePath string) (outdated []OutdatedEntry, numApt int, 
 	}
 
 	for _, pkg := range packages {
-		installed, err := apt.GetInstalledVersion(pkg)
+		installed, err := mgr.GetInstalledVersion(pkg)
 		if err != nil {
 			return nil, numApt, fmt.Errorf("failed to get installed version of %s: %w", pkg, err)
 		}
 		if installed == "" {
 			continue
 		}
-		candidate, err := apt.GetCandidateVersion(pkg)
+		candidate, err := mgr.GetCandidateVersion(pkg)
 		if err != nil {
 			return nil, numApt, fmt.Errorf("failed to get candidate version of %s: %w", pkg, err)
 		}
 		if candidate == "" || candidate == apt.CandidateVersionNone {
 			continue
 		}
-		cmp, err := apt.CompareVersions(installed, candidate)
+		cmp, err := mgr.CompareVersions(installed, candidate)
 		if err != nil {
 			return nil, numApt, fmt.Errorf("version comparison for %s: %w", pkg, err)
 		}

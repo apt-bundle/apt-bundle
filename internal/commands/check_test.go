@@ -51,8 +51,9 @@ func TestRunCheck(t *testing.T) {
 			}
 			return nil, errors.New("unexpected command")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		err := runCheck(checkCmd, nil)
 		if err != nil {
@@ -75,8 +76,9 @@ func TestRunCheck(t *testing.T) {
 			}
 			return nil, errors.New("unexpected")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		ok, missing, _, err := doCheck(tmpFile)
 		if err != nil {
@@ -104,8 +106,9 @@ func TestRunCheck(t *testing.T) {
 			}
 			return nil, errors.New("unexpected")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		_, _, _, err := doCheck(tmpFile)
 		if err == nil {

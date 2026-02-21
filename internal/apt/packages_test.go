@@ -14,7 +14,8 @@ func TestIsPackageInstalled(t *testing.T) {
 			t.Skip("dpkg-query not available, skipping test")
 		}
 
-		installed, err := IsPackageInstalled("dpkg")
+		m := NewAptManager()
+		installed, err := m.IsPackageInstalled("dpkg")
 		if err != nil {
 			t.Errorf("IsPackageInstalled(dpkg) returned error: %v", err)
 		}
@@ -29,7 +30,8 @@ func TestIsPackageInstalled(t *testing.T) {
 			t.Skip("dpkg-query not available, skipping test")
 		}
 
-		installed, err := IsPackageInstalled("definitely-not-a-real-package-12345")
+		m := NewAptManager()
+		installed, err := m.IsPackageInstalled("definitely-not-a-real-package-12345")
 		// dpkg-query returns exit 1 for nonexistent packages, so err may be non-nil
 		if installed {
 			t.Errorf("IsPackageInstalled() = true for nonexistent package, want false (err: %v)", err)
@@ -41,7 +43,8 @@ func TestIsPackageInstalled(t *testing.T) {
 			t.Skip("dpkg-query not available, skipping test")
 		}
 
-		installed, err := IsPackageInstalled("")
+		m := NewAptManager()
+		installed, err := m.IsPackageInstalled("")
 		if err != nil {
 			return
 		}
@@ -54,14 +57,16 @@ func TestIsPackageInstalled(t *testing.T) {
 
 func TestInstallPackage(t *testing.T) {
 	t.Run("install without sudo", func(t *testing.T) {
-		err := InstallPackage("test-package-that-does-not-exist")
+		m := NewAptManager()
+		err := m.InstallPackage("test-package-that-does-not-exist")
 		if err == nil {
 			t.Log("Warning: InstallPackage succeeded unexpectedly (might have sudo)")
 		}
 	})
 
 	t.Run("empty package name", func(t *testing.T) {
-		err := InstallPackage("")
+		m := NewAptManager()
+		err := m.InstallPackage("")
 		if err == nil {
 			t.Error("InstallPackage('') should fail for empty package name")
 		}
@@ -70,7 +75,8 @@ func TestInstallPackage(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	t.Run("update without sudo", func(t *testing.T) {
-		err := Update()
+		m := NewAptManager()
+		err := m.Update()
 		if err == nil {
 			t.Log("Warning: Update succeeded unexpectedly (might have sudo)")
 		}
@@ -111,23 +117,22 @@ func BenchmarkIsPackageInstalled(b *testing.B) {
 		b.Skip("dpkg-query not available, skipping benchmark")
 	}
 
+	m := NewAptManager()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = IsPackageInstalled("dpkg")
+		_, _ = m.IsPackageInstalled("dpkg")
 	}
 }
 
 func TestIsPackageInstalledWithMock(t *testing.T) {
-	defer ResetExecutor()
-
 	t.Run("package is installed", func(t *testing.T) {
 		mock := testutil.NewMockExecutor()
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return []byte(dpkgStatusInstalled), nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		installed, err := IsPackageInstalled("curl")
+		installed, err := m.IsPackageInstalled("curl")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -148,9 +153,9 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return []byte("deinstall ok config-files"), nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		installed, err := IsPackageInstalled("removed-package")
+		installed, err := m.IsPackageInstalled("removed-package")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -164,9 +169,9 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("dpkg-query: no packages found matching nonexistent")
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		installed, err := IsPackageInstalled("nonexistent")
+		installed, err := m.IsPackageInstalled("nonexistent")
 		if err == nil {
 			t.Error("Expected error when dpkg-query fails, got nil")
 		}
@@ -180,9 +185,9 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return []byte(dpkgStatusInstalled), nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		_, _ = IsPackageInstalled("test-pkg")
+		_, _ = m.IsPackageInstalled("test-pkg")
 
 		expectedArgs := []string{"dpkg-query", "-W", "-f=${Status}", "test-pkg"}
 		if len(mock.OutputCalls[0]) != len(expectedArgs) {
@@ -197,16 +202,14 @@ func TestIsPackageInstalledWithMock(t *testing.T) {
 }
 
 func TestInstallPackageWithMock(t *testing.T) {
-	defer ResetExecutor()
-
 	t.Run("successful installation", func(t *testing.T) {
 		mock := testutil.NewMockExecutor()
 		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		err := InstallPackage("curl")
+		err := m.InstallPackage("curl")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -227,9 +230,9 @@ func TestInstallPackageWithMock(t *testing.T) {
 		mock.RunFunc = func(name string, args ...string) error {
 			return errors.New("E: Unable to locate package nonexistent")
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		err := InstallPackage("nonexistent")
+		err := m.InstallPackage("nonexistent")
 		if err == nil {
 			t.Error("Expected error, got nil")
 		}
@@ -240,16 +243,14 @@ func TestInstallPackageWithMock(t *testing.T) {
 }
 
 func TestUpdateWithMock(t *testing.T) {
-	defer ResetExecutor()
-
 	t.Run("successful update", func(t *testing.T) {
 		mock := testutil.NewMockExecutor()
 		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		err := Update()
+		err := m.Update()
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -270,9 +271,9 @@ func TestUpdateWithMock(t *testing.T) {
 		mock.RunFunc = func(name string, args ...string) error {
 			return errors.New("E: Could not get lock /var/lib/apt/lists/lock")
 		}
-		SetExecutor(mock)
+		m := &AptManager{Executor: mock}
 
-		err := Update()
+		err := m.Update()
 		if err == nil {
 			t.Error("Expected error, got nil")
 		}

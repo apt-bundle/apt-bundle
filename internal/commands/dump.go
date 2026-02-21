@@ -32,7 +32,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	fmt.Println("# --- Packages ---")
-	packages, err := apt.GetAllInstalledPackages()
+	packages, err := mgr.GetAllInstalledPackages()
 	if err != nil {
 		return fmt.Errorf("failed to list installed packages: %w", err)
 	}

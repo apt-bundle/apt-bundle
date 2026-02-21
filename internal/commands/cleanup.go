@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
 	"github.com/spf13/cobra"
 )
@@ -113,7 +112,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load state for updating after removal
-	state, err := apt.LoadState()
+	state, err := mgr.LoadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
@@ -121,7 +120,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	// Remove packages
 	fmt.Printf("Removing %d packages...\n", len(packagesToRemove))
 	for _, pkg := range packagesToRemove {
-		if err := apt.RemovePackage(pkg); err != nil {
+		if err := mgr.RemovePackage(pkg); err != nil {
 			return fmt.Errorf("failed to remove package %s: %w", pkg, err)
 		}
 		// Update state
@@ -129,7 +128,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save updated state
-	if err := state.Save(); err != nil {
+	if err := mgr.SaveState(state); err != nil {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
@@ -137,7 +136,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 
 	// Run autoremove if requested
 	if cleanupAutoremove {
-		if err := apt.AutoRemove(); err != nil {
+		if err := mgr.AutoRemove(); err != nil {
 			return fmt.Errorf("failed to autoremove: %w", err)
 		}
 	}
@@ -164,7 +163,7 @@ func extractPackageNames(entries []aptfile.Entry) []string {
 
 // getPackagesToCleanup returns packages that were installed by apt-bundle but are no longer in Aptfile
 func getPackagesToCleanup(aptfilePackages []string) ([]string, error) {
-	state, err := apt.LoadState()
+	state, err := mgr.LoadState()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load state: %w", err)
 	}
@@ -174,7 +173,7 @@ func getPackagesToCleanup(aptfilePackages []string) ([]string, error) {
 
 // getPackagesToZap returns ALL manually installed packages that are not in Aptfile
 func getPackagesToZap(aptfilePackages []string) ([]string, error) {
-	allInstalled, err := apt.GetAllInstalledPackages()
+	allInstalled, err := mgr.GetAllInstalledPackages()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installed packages: %w", err)
 	}

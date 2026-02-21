@@ -4,13 +4,18 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/spf13/cobra"
 )
 
 var (
 	aptfilePath string
+	noUpdate    bool
 	version     = "dev"
 )
+
+// mgr is the AptManager used by all commands.
+var mgr = apt.NewAptManager()
 
 var rootCmd = &cobra.Command{
 	Use:   "apt-bundle",
@@ -27,6 +32,7 @@ func Execute() error {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&aptfilePath, "file", "f", "Aptfile", "Path to Aptfile")
+	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
 }
 
 // getEuid is the function used to get effective UID (overridable for testing)

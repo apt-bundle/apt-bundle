@@ -16,8 +16,8 @@ const CandidateVersionNone = "(none)"
 // IsPackageInstalled checks if a package is installed on the system.
 // Returns (false, err) on dpkg-query failure (package not found, command error, permission denied).
 // Callers can distinguish "not installed" (installed=false, err=nil) from "check failed" (err!=nil).
-func IsPackageInstalled(packageName string) (bool, error) {
-	output, err := runCommandWithOutput("dpkg-query", "-W", "-f=${Status}", packageName)
+func (m *AptManager) IsPackageInstalled(packageName string) (bool, error) {
+	output, err := m.runCommandWithOutput("dpkg-query", "-W", "-f=${Status}", packageName)
 	if err != nil {
 		return false, err
 	}
@@ -27,13 +27,13 @@ func IsPackageInstalled(packageName string) (bool, error) {
 }
 
 // InstallPackage installs a package using apt-get
-func InstallPackage(packageName string) error {
+func (m *AptManager) InstallPackage(packageName string) error {
 	if packageName == "" {
 		return fmt.Errorf("package name cannot be empty")
 	}
 	fmt.Printf("Installing package: %s\n", packageName)
 
-	if err := runCommand("apt-get", "install", "-y", packageName); err != nil {
+	if err := m.runCommand("apt-get", "install", "-y", packageName); err != nil {
 		return wrapCommandError(err, "install package", packageName)
 	}
 
@@ -42,10 +42,10 @@ func InstallPackage(packageName string) error {
 }
 
 // Update runs apt-get update
-func Update() error {
+func (m *AptManager) Update() error {
 	fmt.Println("Updating package lists...")
 
-	if err := runCommand("apt-get", "update"); err != nil {
+	if err := m.runCommand("apt-get", "update"); err != nil {
 		return wrapCommandError(err, "update package lists", "")
 	}
 
@@ -54,10 +54,10 @@ func Update() error {
 }
 
 // RemovePackage removes a package using apt-get
-func RemovePackage(packageName string) error {
+func (m *AptManager) RemovePackage(packageName string) error {
 	fmt.Printf("Removing package: %s\n", packageName)
 
-	if err := runCommand("apt-get", "remove", "-y", packageName); err != nil {
+	if err := m.runCommand("apt-get", "remove", "-y", packageName); err != nil {
 		return wrapCommandError(err, "remove package", packageName)
 	}
 
@@ -66,10 +66,10 @@ func RemovePackage(packageName string) error {
 }
 
 // AutoRemove removes orphaned dependencies using apt-get autoremove
-func AutoRemove() error {
+func (m *AptManager) AutoRemove() error {
 	fmt.Println("Removing orphaned dependencies...")
 
-	if err := runCommand("apt-get", "autoremove", "-y"); err != nil {
+	if err := m.runCommand("apt-get", "autoremove", "-y"); err != nil {
 		return wrapCommandError(err, "autoremove packages", "")
 	}
 
@@ -80,8 +80,8 @@ func AutoRemove() error {
 // GetInstalledVersion returns the installed version of a package, or empty string if not installed.
 // Returns ("", err) on dpkg-query failure (package not found, command error, permission denied).
 // Callers can distinguish "not installed" (version="", err=nil) from "query failed" (err!=nil).
-func GetInstalledVersion(packageName string) (string, error) {
-	output, err := runCommandWithOutput("dpkg-query", "-W", "-f=${Version}", packageName)
+func (m *AptManager) GetInstalledVersion(packageName string) (string, error) {
+	output, err := m.runCommandWithOutput("dpkg-query", "-W", "-f=${Version}", packageName)
 	if err != nil {
 		return "", err
 	}
@@ -92,8 +92,8 @@ func GetInstalledVersion(packageName string) (string, error) {
 var candidateVersionRE = regexp.MustCompile(`(?m)^\s*Candidate:\s*(.+)$`)
 
 // GetCandidateVersion returns the candidate (available) version for a package, or empty if unknown
-func GetCandidateVersion(packageName string) (string, error) {
-	output, err := runCommandWithOutput("apt-cache", "policy", packageName)
+func (m *AptManager) GetCandidateVersion(packageName string) (string, error) {
+	output, err := m.runCommandWithOutput("apt-cache", "policy", packageName)
 	if err != nil {
 		return "", err
 	}
@@ -105,15 +105,15 @@ func GetCandidateVersion(packageName string) (string, error) {
 }
 
 // CompareVersions compares two Debian package versions. Returns -1 if a < b, 0 if a == b, 1 if a > b
-func CompareVersions(a, b string) (int, error) {
+func (m *AptManager) CompareVersions(a, b string) (int, error) {
 	if a == b {
 		return 0, nil
 	}
-	_, err := runCommandWithOutput("dpkg", "--compare-versions", a, "lt", b)
+	_, err := m.runCommandWithOutput("dpkg", "--compare-versions", a, "lt", b)
 	if err == nil {
 		return -1, nil
 	}
-	_, err = runCommandWithOutput("dpkg", "--compare-versions", a, "gt", b)
+	_, err = m.runCommandWithOutput("dpkg", "--compare-versions", a, "gt", b)
 	if err == nil {
 		return 1, nil
 	}
@@ -121,8 +121,8 @@ func CompareVersions(a, b string) (int, error) {
 }
 
 // GetAllInstalledPackages returns a list of all manually installed packages
-func GetAllInstalledPackages() ([]string, error) {
-	output, err := runCommandWithOutput("apt-mark", "showmanual")
+func (m *AptManager) GetAllInstalledPackages() ([]string, error) {
+	output, err := m.runCommandWithOutput("apt-mark", "showmanual")
 	if err != nil {
 		return nil, wrapCommandError(err, "list installed packages", "")
 	}

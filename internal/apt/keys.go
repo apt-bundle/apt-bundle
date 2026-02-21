@@ -19,9 +19,6 @@ const (
 	KeyPrefix = "apt-bundle-"
 )
 
-// keyringDir is the overridable keyring directory (for testing)
-var keyringDir = KeyringDir
-
 // validateKeyURL ensures the URL uses https://. Rejects http://, file://, and other schemes.
 func validateKeyURL(keyURL string) error {
 	u, err := url.Parse(keyURL)
@@ -43,10 +40,10 @@ func validateKeyURL(keyURL string) error {
 }
 
 // KeyPathForURL returns the path where AddGPGKey would store the key for the given URL
-func KeyPathForURL(keyURL string) string {
+func (m *AptManager) KeyPathForURL(keyURL string) string {
 	hash := sha256.Sum256([]byte(keyURL))
 	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
-	return filepath.Join(keyringDir, filename)
+	return filepath.Join(m.KeyringDir, filename)
 }
 
 // keyHTTPClient is used for key downloads; has timeout and enforces HTTPS on redirects
@@ -60,13 +57,10 @@ var keyHTTPClient = &http.Client{
 	},
 }
 
-// httpGet is the function used to make HTTP requests (overridable for testing)
-var httpGet = keyHTTPClient.Get
-
 // AddGPGKey downloads and adds a GPG key from a URL
 // Returns the path to the saved key file for use with Signed-By in DEB822 format
 // Only https:// URLs are allowed; http:// and file:// are rejected for security.
-func AddGPGKey(keyURL string) (string, error) {
+func (m *AptManager) AddGPGKey(keyURL string) (string, error) {
 	if err := validateKeyURL(keyURL); err != nil {
 		return "", err
 	}
@@ -75,7 +69,7 @@ func AddGPGKey(keyURL string) (string, error) {
 
 	hash := sha256.Sum256([]byte(keyURL))
 	filename := fmt.Sprintf("%s%x.gpg", KeyPrefix, hash[:8])
-	keyPath := filepath.Join(keyringDir, filename)
+	keyPath := filepath.Join(m.KeyringDir, filename)
 
 	// Check if key already exists (idempotency)
 	if _, err := os.Stat(keyPath); err == nil {
@@ -84,12 +78,12 @@ func AddGPGKey(keyURL string) (string, error) {
 	}
 
 	// Ensure the keyring directory exists
-	if err := os.MkdirAll(keyringDir, 0755); err != nil {
+	if err := os.MkdirAll(m.KeyringDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create keyring directory: %w", err)
 	}
 
 	// Download the key
-	resp, err := httpGet(keyURL)
+	resp, err := m.HTTPGet(keyURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to download key: %w", err)
 	}
@@ -106,7 +100,7 @@ func AddGPGKey(keyURL string) (string, error) {
 
 	// Check if the key is ASCII armored and needs dearmoring
 	if isArmoredKey(keyData) {
-		keyData, err = dearmorKey(keyData)
+		keyData, err = m.dearmorKey(keyData)
 		if err != nil {
 			return "", fmt.Errorf("failed to dearmor key: %w", err)
 		}
@@ -127,7 +121,7 @@ func isArmoredKey(data []byte) bool {
 }
 
 // dearmorKey converts an ASCII armored key to binary format using gpg --dearmor
-func dearmorKey(data []byte) ([]byte, error) {
+func (m *AptManager) dearmorKey(data []byte) ([]byte, error) {
 	// Create a temp file for the armored key
 	tmpFile, err := os.CreateTemp("", "apt-bundle-key-*.asc")
 	if err != nil {
@@ -151,7 +145,7 @@ func dearmorKey(data []byte) ([]byte, error) {
 	defer os.Remove(outPath)
 
 	// Run gpg --dearmor
-	if err := runCommand("gpg", "--dearmor", "-o", outPath, tmpFile.Name()); err != nil {
+	if err := m.runCommand("gpg", "--dearmor", "-o", outPath, tmpFile.Name()); err != nil {
 		return nil, fmt.Errorf("gpg --dearmor failed: %w", err)
 	}
 
@@ -165,24 +159,4 @@ func RemoveGPGKey(keyPath string) error {
 		return fmt.Errorf("failed to remove key: %w", err)
 	}
 	return nil
-}
-
-// SetHTTPGet sets the HTTP get function (for testing only)
-func SetHTTPGet(f func(string) (*http.Response, error)) {
-	httpGet = f
-}
-
-// ResetHTTPGet resets the HTTP get function to default (for testing only)
-func ResetHTTPGet() {
-	httpGet = keyHTTPClient.Get
-}
-
-// SetKeyringDir sets the keyring directory (for testing only)
-func SetKeyringDir(path string) {
-	keyringDir = path
-}
-
-// ResetKeyringDir resets the keyring directory to default (for testing only)
-func ResetKeyringDir() {
-	keyringDir = KeyringDir
 }

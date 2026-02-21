@@ -176,17 +176,18 @@ func TestGetPackagesNotIn(t *testing.T) {
 	})
 }
 
-func TestStatePersistence(t *testing.T) {
-	// Create a temp directory for testing
-	tmpDir, err := os.MkdirTemp("", "apt-bundle-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+func newTestManager(t *testing.T) *AptManager {
+	t.Helper()
+	tmpDir := t.TempDir()
 	testStatePath := filepath.Join(tmpDir, "state.json")
-	SetStatePath(testStatePath)
-	defer ResetStatePath()
+	return &AptManager{
+		StatePath: func() string { return testStatePath },
+	}
+}
+
+func TestStatePersistence(t *testing.T) {
+	m := newTestManager(t)
+	testStatePath := m.StatePath()
 
 	t.Run("save and load state", func(t *testing.T) {
 		state := NewState()
@@ -195,7 +196,7 @@ func TestStatePersistence(t *testing.T) {
 		state.AddRepository("docker.sources")
 		state.AddKey("docker.gpg")
 
-		err := state.Save()
+		err := m.SaveState(state)
 		if err != nil {
 			t.Fatalf("Failed to save state: %v", err)
 		}
@@ -206,7 +207,7 @@ func TestStatePersistence(t *testing.T) {
 		}
 
 		// Load the state
-		loaded, err := LoadState()
+		loaded, err := m.LoadState()
 		if err != nil {
 			t.Fatalf("Failed to load state: %v", err)
 		}
@@ -231,18 +232,13 @@ func TestStatePersistence(t *testing.T) {
 }
 
 func TestLoadStateNonexistent(t *testing.T) {
-	// Create a temp directory for testing
-	tmpDir, err := os.MkdirTemp("", "apt-bundle-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir := t.TempDir()
 	testStatePath := filepath.Join(tmpDir, "nonexistent", "state.json")
-	SetStatePath(testStatePath)
-	defer ResetStatePath()
+	m := &AptManager{
+		StatePath: func() string { return testStatePath },
+	}
 
-	state, err := LoadState()
+	state, err := m.LoadState()
 	if err != nil {
 		t.Fatalf("Expected no error for nonexistent state file, got %v", err)
 	}
@@ -256,22 +252,17 @@ func TestLoadStateNonexistent(t *testing.T) {
 }
 
 func TestSaveCreatesDirectory(t *testing.T) {
-	// Create a temp directory for testing
-	tmpDir, err := os.MkdirTemp("", "apt-bundle-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir := t.TempDir()
 	// Use a nested path that doesn't exist
 	testStatePath := filepath.Join(tmpDir, "nested", "dir", "state.json")
-	SetStatePath(testStatePath)
-	defer ResetStatePath()
+	m := &AptManager{
+		StatePath: func() string { return testStatePath },
+	}
 
 	state := NewState()
 	state.AddPackage("vim")
 
-	err = state.Save()
+	err := m.SaveState(state)
 	if err != nil {
 		t.Fatalf("Failed to save state: %v", err)
 	}

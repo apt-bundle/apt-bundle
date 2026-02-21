@@ -66,7 +66,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		fmt.Println("✓ add-apt-repository available")
 	}
 
-	if _, err := apt.LoadState(); err != nil {
+	if _, err := mgr.LoadState(); err != nil {
 		fmt.Fprintf(os.Stderr, "✗ state file: %v (path: %s)\n", err, apt.StateDir)
 		failed = true
 	} else {

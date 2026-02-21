@@ -48,9 +48,6 @@ func TestRunSyncDryRun(t *testing.T) {
 	aptfilePath = tmpFile
 	defer func() { aptfilePath = origPath }()
 
-	apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-	defer apt.ResetStatePath()
-
 	mock := testutil.NewMockExecutor()
 	mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 		if name == "dpkg-query" {
@@ -58,8 +55,12 @@ func TestRunSyncDryRun(t *testing.T) {
 		}
 		return nil, errors.New("unexpected")
 	}
-	apt.SetExecutor(mock)
-	defer apt.ResetExecutor()
+	origMgr := mgr
+	mgr = &apt.AptManager{
+		Executor:  mock,
+		StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+	}
+	defer func() { mgr = origMgr }()
 
 	syncDryRun = true
 	defer func() { syncDryRun = false }()
@@ -85,12 +86,14 @@ func TestRunSyncWithMock(t *testing.T) {
 		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
 			return nil, errors.New("package not found")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
 
 		tmpDir := t.TempDir()
-		apt.SetStatePath(filepath.Join(tmpDir, "state.json"))
-		defer apt.ResetStatePath()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:  mock,
+			StatePath: func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
 
 		tmpFile := filepath.Join(tmpDir, "Aptfile")
 		content := "apt curl\napt git\n"

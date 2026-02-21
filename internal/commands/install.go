@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	noUpdate      bool
 	installLock   bool
 	installLocked bool
 	installDryRun bool
@@ -29,7 +28,6 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
 	installCmd.Flags().BoolVar(&installLock, "lock", false, "After install, write Aptfile.lock with current package versions")
 	installCmd.Flags().BoolVar(&installLocked, "locked", false, "Install only versions from Aptfile.lock (fail if lock missing)")
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Only report what would be installed/added; do not run apt or change state")
@@ -57,7 +55,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return runInstallDryRun(entries)
 	}
 
-	state, err := apt.LoadState()
+	state, err := mgr.LoadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
@@ -68,7 +66,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	for _, entry := range entries {
 		switch entry.Type {
 		case aptfile.EntryTypeKey:
-			keyPath, err := apt.AddGPGKey(entry.Value)
+			keyPath, err := mgr.AddGPGKey(entry.Value)
 			if err != nil {
 				return fmt.Errorf("failed to add GPG key: %w", err)
 			}
@@ -76,7 +74,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			state.AddKey(keyPath)
 
 		case aptfile.EntryTypePPA:
-			if err := apt.AddPPA(entry.Value); err != nil {
+			if err := mgr.AddPPA(entry.Value); err != nil {
 				return fmt.Errorf("failed to add PPA: %w", err)
 			}
 			reposAdded = true
@@ -94,7 +92,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	if reposAdded || !noUpdate {
 		if !noUpdate {
-			if err := apt.Update(); err != nil {
+			if err := mgr.Update(); err != nil {
 				return fmt.Errorf("failed to update package lists: %w", err)
 			}
 		} else if reposAdded {
@@ -121,7 +119,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Installing %d packages...\n", len(packagesToInstall))
 		for _, pkg := range packagesToInstall {
 			pkgName := aptfile.ExtractPkgName(pkg)
-			installed, err := apt.IsPackageInstalled(pkgName)
+			installed, err := mgr.IsPackageInstalled(pkgName)
 			if err != nil {
 				fmt.Printf("Warning: Could not check if %s is installed: %v\n", pkgName, err)
 			}
@@ -133,7 +131,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				continue
 			}
 
-			if err := apt.InstallPackage(pkg); err != nil {
+			if err := mgr.InstallPackage(pkg); err != nil {
 				return fmt.Errorf("failed to install package %s: %w", pkg, err)
 			}
 
@@ -146,7 +144,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save the updated state
-	if err := state.Save(); err != nil {
+	if err := mgr.SaveState(state); err != nil {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
@@ -167,7 +165,7 @@ func writeLockFileFromPackages(packages []string) error {
 	var locked []pkgVer
 	for _, pkg := range packages {
 		pkgName := aptfile.ExtractPkgName(pkg)
-		ver, err := apt.GetInstalledVersion(pkgName)
+		ver, err := mgr.GetInstalledVersion(pkgName)
 		if err != nil || ver == "" {
 			continue
 		}
@@ -199,7 +197,7 @@ func runInstallDryRun(entries []aptfile.Entry) error {
 	for _, entry := range entries {
 		switch entry.Type {
 		case aptfile.EntryTypeKey:
-			keyPath := apt.KeyPathForURL(entry.Value)
+			keyPath := mgr.KeyPathForURL(entry.Value)
 			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 				wouldAddKeys = append(wouldAddKeys, entry.Value)
 			}
@@ -215,7 +213,7 @@ func runInstallDryRun(entries []aptfile.Entry) error {
 			}
 		case aptfile.EntryTypeApt:
 			pkgName := aptfile.ExtractPkgName(entry.Value)
-			installed, err := apt.IsPackageInstalled(pkgName)
+			installed, err := mgr.IsPackageInstalled(pkgName)
 			if err != nil || !installed {
 				wouldInstall = append(wouldInstall, entry.Value)
 			}

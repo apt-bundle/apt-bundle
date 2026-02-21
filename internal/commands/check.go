@@ -53,7 +53,7 @@ func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.E
 		switch entry.Type {
 		case aptfile.EntryTypeApt:
 			pkgName := aptfile.ExtractPkgName(entry.Value)
-			installed, err := apt.IsPackageInstalled(pkgName)
+			installed, err := mgr.IsPackageInstalled(pkgName)
 			if err != nil {
 				return false, nil, nil, fmt.Errorf("check package %s: %w", pkgName, err)
 			}
@@ -74,7 +74,7 @@ func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.E
 			}
 
 		case aptfile.EntryTypeKey:
-			keyPath := apt.KeyPathForURL(entry.Value)
+			keyPath := mgr.KeyPathForURL(entry.Value)
 			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 				missing = append(missing, "key "+entry.Value)
 			}

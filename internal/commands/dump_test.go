@@ -20,8 +20,9 @@ func TestRunDump(t *testing.T) {
 			}
 			return nil, errors.New("unexpected command")
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		old := os.Stdout
 		r, w, _ := os.Pipe()
@@ -71,8 +72,9 @@ func TestRunDump(t *testing.T) {
 			}
 			return nil, nil
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		err := runDump(dumpCmd, []string{})
 		if err == nil {

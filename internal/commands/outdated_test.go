@@ -54,8 +54,9 @@ func TestRunOutdated(t *testing.T) {
 			}
 			return nil, errors.New("unexpected command: " + name)
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		r, w, err := os.Pipe()
 		if err != nil {
@@ -108,8 +109,9 @@ func TestRunOutdated(t *testing.T) {
 			}
 			return nil, errors.New("unexpected: " + name)
 		}
-		apt.SetExecutor(mock)
-		defer apt.ResetExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{Executor: mock}
+		defer func() { mgr = origMgr }()
 
 		outdated, numApt, err := collectOutdated(aptPath)
 		if err != nil {

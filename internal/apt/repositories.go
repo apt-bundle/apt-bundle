@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -17,21 +16,9 @@ const (
 	SourcesPrefix = "apt-bundle-"
 )
 
-// lookPath is the function used to look up command paths (overridable for testing)
-var lookPath = exec.LookPath
-
-// osReleasePath is the path to os-release (overridable for testing)
-var osReleasePath = "/etc/os-release"
-
-// SetOsReleasePath sets osReleasePath (for testing only)
-func SetOsReleasePath(path string) { osReleasePath = path }
-
-// ResetOsReleasePath resets osReleasePath to default (for testing only)
-func ResetOsReleasePath() { osReleasePath = "/etc/os-release" }
-
 // isUbuntu checks if the current system is Ubuntu by reading /etc/os-release
-func isUbuntu() bool {
-	data, err := os.ReadFile(osReleasePath)
+func (m *AptManager) isUbuntu() bool {
+	data, err := os.ReadFile(m.OsReleasePath)
 	if err != nil {
 		return false
 	}
@@ -41,32 +28,22 @@ func isUbuntu() bool {
 }
 
 // AddPPA adds a PPA repository using add-apt-repository
-func AddPPA(ppa string) error {
-	if !isUbuntu() {
+func (m *AptManager) AddPPA(ppa string) error {
+	if !m.isUbuntu() {
 		fmt.Println("⚠️  Warning: PPAs are designed for Ubuntu. Using on other distros may cause issues.")
 	}
 	fmt.Printf("Adding PPA: %s\n", ppa)
 
-	if _, err := lookPath("add-apt-repository"); err != nil {
+	if _, err := m.LookPath("add-apt-repository"); err != nil {
 		return fmt.Errorf("add-apt-repository not found. Please install software-properties-common")
 	}
 
-	if err := runCommand("add-apt-repository", "-y", ppa); err != nil {
+	if err := m.runCommand("add-apt-repository", "-y", ppa); err != nil {
 		return wrapCommandError(err, "add PPA", ppa)
 	}
 
 	fmt.Printf("✓ PPA %s added successfully\n", ppa)
 	return nil
-}
-
-// SetLookPath sets the lookPath function (for testing only)
-func SetLookPath(f func(string) (string, error)) {
-	lookPath = f
-}
-
-// ResetLookPath resets lookPath to the default (for testing only)
-func ResetLookPath() {
-	lookPath = exec.LookPath
 }
 
 // DebRepository represents a parsed deb repository configuration

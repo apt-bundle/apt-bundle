@@ -1,10 +1,6 @@
 package testutil
 
-import "github.com/apt-bundle/apt-bundle/internal/executor"
-
-// MockExecutor implements executor.Executor for testing.
-var _ executor.Executor = (*MockExecutor)(nil)
-
+// MockExecutor implements the Executor interface (defined in internal/apt) for testing.
 type MockExecutor struct {
 	RunFunc     func(name string, args ...string) error
 	OutputFunc  func(name string, args ...string) ([]byte, error)

@@ -11,28 +11,25 @@ import (
 
 func TestAddGPGKey(t *testing.T) {
 	tmpDir := t.TempDir()
-	_ = tmpDir
 
 	t.Run("successful key download - binary key", func(t *testing.T) {
-		defer ResetHTTPGet()
-		defer ResetExecutor()
-		defer ResetKeyringDir()
-
 		keyringPath := filepath.Join(tmpDir, "keyrings")
 		if err := os.MkdirAll(keyringPath, 0755); err != nil {
 			t.Fatalf("Failed to create keyring dir: %v", err)
 		}
-		SetKeyringDir(keyringPath)
 
 		binaryKeyData := []byte{0x99, 0x01, 0x0d, 0x04}
-		SetHTTPGet(func(url string) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(string(binaryKeyData))),
-			}, nil
-		})
+		m := &AptManager{
+			KeyringDir: keyringPath,
+			HTTPGet: func(url string) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(string(binaryKeyData))),
+				}, nil
+			},
+		}
 
-		keyPath, err := AddGPGKey("https://example.com/key.gpg")
+		keyPath, err := m.AddGPGKey("https://example.com/key.gpg")
 		if err != nil {
 			t.Fatalf("AddGPGKey failed: %v", err)
 		}
@@ -45,16 +42,17 @@ func TestAddGPGKey(t *testing.T) {
 	})
 
 	t.Run("HTTP error", func(t *testing.T) {
-		defer ResetHTTPGet()
+		m := &AptManager{
+			KeyringDir: tmpDir,
+			HTTPGet: func(url string) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			},
+		}
 
-		SetHTTPGet(func(url string) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusNotFound,
-				Body:       io.NopCloser(strings.NewReader("")),
-			}, nil
-		})
-
-		_, err := AddGPGKey("https://example.com/nonexistent.gpg")
+		_, err := m.AddGPGKey("https://example.com/nonexistent.gpg")
 		if err == nil {
 			t.Error("Expected error for HTTP 404, got nil")
 		}
@@ -64,7 +62,8 @@ func TestAddGPGKey(t *testing.T) {
 	})
 
 	t.Run("reject http://", func(t *testing.T) {
-		_, err := AddGPGKey("http://example.com/key.gpg")
+		m := NewAptManager()
+		_, err := m.AddGPGKey("http://example.com/key.gpg")
 		if err == nil {
 			t.Error("Expected error for http:// URL")
 		}
@@ -74,7 +73,8 @@ func TestAddGPGKey(t *testing.T) {
 	})
 
 	t.Run("reject file://", func(t *testing.T) {
-		_, err := AddGPGKey("file:///etc/passwd")
+		m := NewAptManager()
+		_, err := m.AddGPGKey("file:///etc/passwd")
 		if err == nil {
 			t.Error("Expected error for file:// URL")
 		}
@@ -84,14 +84,16 @@ func TestAddGPGKey(t *testing.T) {
 	})
 
 	t.Run("reject invalid URL", func(t *testing.T) {
-		_, err := AddGPGKey("not-a-valid-url")
+		m := NewAptManager()
+		_, err := m.AddGPGKey("not-a-valid-url")
 		if err == nil {
 			t.Error("Expected error for invalid URL")
 		}
 	})
 
 	t.Run("reject keyserver://", func(t *testing.T) {
-		_, err := AddGPGKey("keyserver://keyserver.ubuntu.com/12345")
+		m := NewAptManager()
+		_, err := m.AddGPGKey("keyserver://keyserver.ubuntu.com/12345")
 		if err == nil {
 			t.Error("Expected error for keyserver:// URL")
 		}
@@ -143,27 +145,21 @@ func TestRemoveGPGKey(t *testing.T) {
 	})
 }
 
-func TestSetHTTPGet(t *testing.T) {
-	defer ResetHTTPGet()
-
-	customCalled := false
-	SetHTTPGet(func(url string) (*http.Response, error) {
-		customCalled = true
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader("test")),
-		}, nil
-	})
-
-	_, _ = httpGet("http://example.com")
-	if !customCalled {
-		t.Error("Custom httpGet function was not called")
+func TestKeyPathForURL(t *testing.T) {
+	m := &AptManager{KeyringDir: "/test/keyrings"}
+	path := m.KeyPathForURL("https://example.com/key.gpg")
+	if path == "" {
+		t.Error("Expected non-empty path")
+	}
+	if !strings.HasPrefix(path, "/test/keyrings/") {
+		t.Errorf("Expected path to start with /test/keyrings/, got %s", path)
 	}
 }
 
 func BenchmarkAddGPGKey(b *testing.B) {
+	m := NewAptManager()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = AddGPGKey("https://example.com/key.gpg")
+		_, _ = m.AddGPGKey("https://example.com/key.gpg")
 	}
 }

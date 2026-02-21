@@ -13,16 +13,14 @@ import (
 
 func TestIsUbuntu(t *testing.T) {
 	dir := t.TempDir()
-	defer ResetOsReleasePath()
 
 	t.Run("ID=ubuntu returns true", func(t *testing.T) {
 		f := filepath.Join(dir, "os-release-ubuntu")
 		if err := os.WriteFile(f, []byte("ID=ubuntu\nVERSION_ID=22.04\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		SetOsReleasePath(f)
-		defer ResetOsReleasePath()
-		if !isUbuntu() {
+		m := &AptManager{OsReleasePath: f}
+		if !m.isUbuntu() {
 			t.Error("expected isUbuntu() true for ID=ubuntu")
 		}
 	})
@@ -32,9 +30,8 @@ func TestIsUbuntu(t *testing.T) {
 		if err := os.WriteFile(f, []byte("ID=linuxmint\nID_LIKE=ubuntu\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		SetOsReleasePath(f)
-		defer ResetOsReleasePath()
-		if !isUbuntu() {
+		m := &AptManager{OsReleasePath: f}
+		if !m.isUbuntu() {
 			t.Error("expected isUbuntu() true for ID_LIKE=ubuntu")
 		}
 	})
@@ -44,17 +41,15 @@ func TestIsUbuntu(t *testing.T) {
 		if err := os.WriteFile(f, []byte("ID=debian\nVERSION_ID=12\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		SetOsReleasePath(f)
-		defer ResetOsReleasePath()
-		if isUbuntu() {
+		m := &AptManager{OsReleasePath: f}
+		if m.isUbuntu() {
 			t.Error("expected isUbuntu() false for ID=debian")
 		}
 	})
 
 	t.Run("missing file returns false", func(t *testing.T) {
-		SetOsReleasePath(filepath.Join(dir, "nonexistent"))
-		defer ResetOsReleasePath()
-		if isUbuntu() {
+		m := &AptManager{OsReleasePath: filepath.Join(dir, "nonexistent")}
+		if m.isUbuntu() {
 			t.Error("expected isUbuntu() false when os-release missing")
 		}
 	})
@@ -62,7 +57,8 @@ func TestIsUbuntu(t *testing.T) {
 
 func TestAddPPA(t *testing.T) {
 	t.Run("add-apt-repository not available", func(t *testing.T) {
-		err := AddPPA("ppa:deadsnakes/ppa")
+		m := NewAptManager()
+		err := m.AddPPA("ppa:deadsnakes/ppa")
 
 		if err != nil {
 			if _, lookupErr := exec.LookPath("add-apt-repository"); lookupErr != nil {
@@ -77,7 +73,8 @@ func TestAddPPA(t *testing.T) {
 			t.Skip("add-apt-repository not available, skipping test")
 		}
 
-		err := AddPPA("")
+		m := NewAptManager()
+		err := m.AddPPA("")
 		if err == nil {
 			t.Log("Warning: AddPPA('') succeeded unexpectedly")
 		}
@@ -88,7 +85,8 @@ func TestAddPPA(t *testing.T) {
 			t.Skip("add-apt-repository not available, skipping test")
 		}
 
-		err := AddPPA("invalid-ppa-format")
+		m := NewAptManager()
+		err := m.AddPPA("invalid-ppa-format")
 		if err == nil {
 			t.Log("Warning: AddPPA with invalid format succeeded unexpectedly")
 		}
@@ -99,7 +97,8 @@ func TestAddPPA(t *testing.T) {
 			t.Skip("add-apt-repository not available, skipping test")
 		}
 
-		err := AddPPA("ppa:deadsnakes/ppa")
+		m := NewAptManager()
+		err := m.AddPPA("ppa:deadsnakes/ppa")
 		if err == nil {
 			t.Log("Warning: AddPPA succeeded unexpectedly (might have sudo)")
 		}
@@ -298,15 +297,15 @@ func TestRemoveDebRepository(t *testing.T) {
 }
 
 func TestAddPPAWithMock(t *testing.T) {
-	defer ResetExecutor()
-	defer ResetLookPath()
-
 	t.Run("add-apt-repository not found", func(t *testing.T) {
-		SetLookPath(func(file string) (string, error) {
-			return "", errors.New("executable file not found in $PATH")
-		})
+		m := &AptManager{
+			OsReleasePath: "/nonexistent",
+			LookPath: func(file string) (string, error) {
+				return "", errors.New("executable file not found in $PATH")
+			},
+		}
 
-		err := AddPPA("ppa:test/ppa")
+		err := m.AddPPA("ppa:test/ppa")
 		if err == nil {
 			t.Error("Expected error, got nil")
 		}
@@ -316,17 +315,19 @@ func TestAddPPAWithMock(t *testing.T) {
 	})
 
 	t.Run("successful PPA addition", func(t *testing.T) {
-		SetLookPath(func(file string) (string, error) {
-			return "/usr/bin/add-apt-repository", nil
-		})
-
 		mock := testutil.NewMockExecutor()
 		mock.RunFunc = func(name string, args ...string) error {
 			return nil
 		}
-		SetExecutor(mock)
+		m := &AptManager{
+			Executor:      mock,
+			OsReleasePath: "/nonexistent",
+			LookPath: func(file string) (string, error) {
+				return "/usr/bin/add-apt-repository", nil
+			},
+		}
 
-		err := AddPPA("ppa:deadsnakes/ppa")
+		err := m.AddPPA("ppa:deadsnakes/ppa")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -343,17 +344,19 @@ func TestAddPPAWithMock(t *testing.T) {
 	})
 
 	t.Run("PPA addition command failure", func(t *testing.T) {
-		SetLookPath(func(file string) (string, error) {
-			return "/usr/bin/add-apt-repository", nil
-		})
-
 		mock := testutil.NewMockExecutor()
 		mock.RunFunc = func(name string, args ...string) error {
 			return errors.New("E: The repository 'ppa:invalid/ppa' does not have a Release file")
 		}
-		SetExecutor(mock)
+		m := &AptManager{
+			Executor:      mock,
+			OsReleasePath: "/nonexistent",
+			LookPath: func(file string) (string, error) {
+				return "/usr/bin/add-apt-repository", nil
+			},
+		}
 
-		err := AddPPA("ppa:invalid/ppa")
+		err := m.AddPPA("ppa:invalid/ppa")
 		if err == nil {
 			t.Error("Expected error, got nil")
 		}
@@ -365,15 +368,17 @@ func TestAddPPAWithMock(t *testing.T) {
 
 	t.Run("lookPath is called with correct argument", func(t *testing.T) {
 		var calledWith string
-		SetLookPath(func(file string) (string, error) {
-			calledWith = file
-			return "/usr/bin/add-apt-repository", nil
-		})
-
 		mock := testutil.NewMockExecutor()
-		SetExecutor(mock)
+		m := &AptManager{
+			Executor:      mock,
+			OsReleasePath: "/nonexistent",
+			LookPath: func(file string) (string, error) {
+				calledWith = file
+				return "/usr/bin/add-apt-repository", nil
+			},
+		}
 
-		_ = AddPPA("ppa:test/ppa")
+		_ = m.AddPPA("ppa:test/ppa")
 
 		if calledWith != "add-apt-repository" {
 			t.Errorf("Expected lookPath to be called with 'add-apt-repository', got '%s'", calledWith)
@@ -381,15 +386,13 @@ func TestAddPPAWithMock(t *testing.T) {
 	})
 }
 
-func TestSetLookPath(t *testing.T) {
-	defer ResetLookPath()
-
+func TestLookPathField(t *testing.T) {
 	customLookPath := func(file string) (string, error) {
 		return "/custom/path", nil
 	}
-	SetLookPath(customLookPath)
+	m := &AptManager{LookPath: customLookPath}
 
-	path, err := lookPath("test")
+	path, err := m.LookPath("test")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -398,21 +401,14 @@ func TestSetLookPath(t *testing.T) {
 	}
 }
 
-func TestResetLookPath(t *testing.T) {
-	SetLookPath(func(file string) (string, error) {
-		return "/custom/path", nil
-	})
-	ResetLookPath()
-	_, _ = lookPath("ls")
-}
-
 func BenchmarkAddPPA(b *testing.B) {
 	if _, err := exec.LookPath("add-apt-repository"); err != nil {
 		b.Skip("add-apt-repository not available, skipping benchmark")
 	}
 
+	m := NewAptManager()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = AddPPA("ppa:test/ppa")
+		_ = m.AddPPA("ppa:test/ppa")
 	}
 }

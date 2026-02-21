@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +52,7 @@ func runLock(cmd *cobra.Command, args []string) error {
 	var locked []pkgVer
 	for _, pkg := range packages {
 		pkgName := aptfile.ExtractPkgName(pkg)
-		ver, err := apt.GetInstalledVersion(pkgName)
+		ver, err := mgr.GetInstalledVersion(pkgName)
 		if err != nil || ver == "" {
 			fmt.Printf("Warning: %s not installed, skipping in lock file\n", pkgName)
 			continue
