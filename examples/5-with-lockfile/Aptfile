@@ -1,0 +1,7 @@
+# Packages for a typical CI environment
+# After changing this file, regenerate the lock file:
+#   apt-bundle lock --file Aptfile
+apt curl
+apt git
+apt "jq=1.6-2.1ubuntu3"
+apt ca-certificates
