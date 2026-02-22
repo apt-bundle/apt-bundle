@@ -347,12 +347,32 @@ func TestAddDebRepository(t *testing.T) {
 			SourcesPrefix: "apt-bundle-",
 		}
 
-		// This will fail without write permissions to /etc/apt/sources.list.d
-		// but we can verify it doesn't panic and handles the error
 		_, err := m.AddDebRepository(repoLine, keyPath)
 		if err != nil {
-			// Expected to fail in test environment
-			t.Logf("AddDebRepository failed (expected in test): %v", err)
+			// Confirm the failure is a filesystem error, not a parse error
+			if strings.Contains(err.Error(), "failed to parse deb line") {
+				t.Errorf("Expected filesystem error (not parse error), got: %v", err)
+			}
+			t.Logf("AddDebRepository failed at filesystem step as expected: %v", err)
+		}
+	})
+
+	t.Run("rejects invalid repo line", func(t *testing.T) {
+		m := &AptManager{SourcesDir: tmpDir, SourcesPrefix: "apt-bundle-"}
+		_, err := m.AddDebRepository("not-a-valid-repo", "")
+		if err == nil {
+			t.Error("Expected error for invalid repo line")
+		}
+	})
+
+	t.Run("rejects http URI", func(t *testing.T) {
+		m := &AptManager{SourcesDir: tmpDir, SourcesPrefix: "apt-bundle-"}
+		_, err := m.AddDebRepository("http://example.com/ubuntu jammy main", "")
+		if err == nil {
+			t.Fatal("Expected error for http:// URI")
+		}
+		if !strings.Contains(err.Error(), "https") {
+			t.Errorf("Expected https rejection message, got: %v", err)
 		}
 	})
 }

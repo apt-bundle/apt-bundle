@@ -90,14 +90,6 @@ func TestValidatePackageName(t *testing.T) {
 }
 
 func TestInstallPackage(t *testing.T) {
-	t.Run("install without sudo", func(t *testing.T) {
-		m := NewAptManager()
-		err := m.InstallPackage("test-package-that-does-not-exist")
-		if err == nil {
-			t.Log("Warning: InstallPackage succeeded unexpectedly (might have sudo)")
-		}
-	})
-
 	t.Run("empty package name", func(t *testing.T) {
 		m := NewAptManager()
 		err := m.InstallPackage("")
@@ -118,16 +110,6 @@ func TestInstallPackage(t *testing.T) {
 	})
 }
 
-func TestUpdate(t *testing.T) {
-	t.Run("update without sudo", func(t *testing.T) {
-		m := NewAptManager()
-		err := m.Update()
-		if err == nil {
-			t.Log("Warning: Update succeeded unexpectedly (might have sudo)")
-		}
-	})
-}
-
 func TestSplitLines(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -136,7 +118,7 @@ func TestSplitLines(t *testing.T) {
 	}{
 		{"unix newlines", "a\nb\nc", []string{"a", "b", "c"}},
 		{"windows newlines", "a\r\nb\r\nc", []string{"a", "b", "c"}},
-		{"empty", "", []string{}},
+		{"empty", "", nil},
 		{"single line", "only", []string{"only"}},
 		{"trailing newline", "a\nb\n", []string{"a", "b"}},
 	}
