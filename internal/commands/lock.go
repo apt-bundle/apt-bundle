@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -98,14 +101,15 @@ func ReadLockFile() ([]string, error) {
 	path := getLockFilePath()
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("lock file not found: %s (run 'apt-bundle lock' first)", path)
 		}
 		return nil, err
 	}
 	var specs []string
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -113,6 +117,9 @@ func ReadLockFile() ([]string, error) {
 		if pkg, ver, ok := strings.Cut(line, "="); ok && pkg != "" && ver != "" {
 			specs = append(specs, line)
 		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("reading lock file %s: %w", path, err)
 	}
 	return specs, nil
 }

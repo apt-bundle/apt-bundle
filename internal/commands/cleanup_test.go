@@ -448,7 +448,7 @@ func TestGetPackagesToCleanup(t *testing.T) {
 	}
 
 	t.Run("some packages to remove", func(t *testing.T) {
-		toRemove, err := getPackagesToCleanup([]string{"vim", "curl"})
+		toRemove, _, err := getPackagesToCleanup([]string{"vim", "curl"})
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -458,7 +458,7 @@ func TestGetPackagesToCleanup(t *testing.T) {
 	})
 
 	t.Run("no packages to remove", func(t *testing.T) {
-		toRemove, err := getPackagesToCleanup([]string{"vim", "curl", "git", "htop"})
+		toRemove, _, err := getPackagesToCleanup([]string{"vim", "curl", "git", "htop"})
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -468,7 +468,7 @@ func TestGetPackagesToCleanup(t *testing.T) {
 	})
 
 	t.Run("all packages to remove", func(t *testing.T) {
-		toRemove, err := getPackagesToCleanup([]string{})
+		toRemove, _, err := getPackagesToCleanup([]string{})
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

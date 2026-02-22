@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
 	"github.com/spf13/cobra"
 )
@@ -62,6 +63,7 @@ func doCleanup(force, zap, autoremove bool) error {
 	aptfilePackages := extractPackageNames(entries)
 
 	var packagesToRemove []string
+	var cachedState *apt.State // reused below to avoid a second LoadState in non-zap mode
 
 	if zap {
 		// Zap mode: remove ALL packages not in Aptfile
@@ -71,7 +73,7 @@ func doCleanup(force, zap, autoremove bool) error {
 		}
 	} else {
 		// Normal mode: only remove packages tracked by apt-bundle
-		packagesToRemove, err = getPackagesToCleanup(aptfilePackages)
+		packagesToRemove, cachedState, err = getPackagesToCleanup(aptfilePackages)
 		if err != nil {
 			return err
 		}
@@ -116,10 +118,15 @@ func doCleanup(force, zap, autoremove bool) error {
 		}
 	}
 
-	// Load state for updating after removal
-	state, err := mgr.LoadState()
-	if err != nil {
-		return fmt.Errorf("failed to load state: %w", err)
+	// Reuse state already loaded by getPackagesToCleanup in non-zap mode.
+	var state *apt.State
+	if cachedState != nil {
+		state = cachedState
+	} else {
+		state, err = mgr.LoadState()
+		if err != nil {
+			return fmt.Errorf("failed to load state: %w", err)
+		}
 	}
 
 	// Remove packages
@@ -166,14 +173,15 @@ func extractPackageNames(entries []aptfile.Entry) []string {
 	return names
 }
 
-// getPackagesToCleanup returns packages that were installed by apt-bundle but are no longer in Aptfile
-func getPackagesToCleanup(aptfilePackages []string) ([]string, error) {
+// getPackagesToCleanup returns packages that were installed by apt-bundle but are no longer in Aptfile,
+// along with the loaded State so the caller can reuse it without a second LoadState call.
+func getPackagesToCleanup(aptfilePackages []string) ([]string, *apt.State, error) {
 	state, err := mgr.LoadState()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load state: %w", err)
+		return nil, nil, fmt.Errorf("failed to load state: %w", err)
 	}
 
-	return state.GetPackagesNotIn(aptfilePackages), nil
+	return state.GetPackagesNotIn(aptfilePackages), state, nil
 }
 
 // getPackagesToZap returns ALL manually installed packages that are not in Aptfile

@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -57,9 +59,21 @@ func runSyncDryRun() error {
 
 	// What would install do
 	fmt.Printf("Reading Aptfile from: %s (dry-run)\n", aptfilePath)
-	wouldInstall, wouldRemove, err := syncDryRunPlan(entries)
+	wouldInstall, wouldRemove, wouldAddKeys, wouldAddRepos, err := syncDryRunPlan(entries)
 	if err != nil {
 		return fmt.Errorf("sync dry-run: %w", err)
+	}
+	if len(wouldAddKeys) > 0 {
+		fmt.Println("--- would add keys ---")
+		for _, k := range wouldAddKeys {
+			fmt.Printf("  %s\n", k)
+		}
+	}
+	if len(wouldAddRepos) > 0 {
+		fmt.Println("--- would add repositories ---")
+		for _, r := range wouldAddRepos {
+			fmt.Printf("  %s\n", r)
+		}
 	}
 	if len(wouldInstall) > 0 {
 		fmt.Println("--- would install ---")
@@ -73,21 +87,21 @@ func runSyncDryRun() error {
 			fmt.Printf("  %s\n", p)
 		}
 	}
-	if len(wouldInstall) == 0 && len(wouldRemove) == 0 {
+	if len(wouldInstall) == 0 && len(wouldRemove) == 0 && len(wouldAddKeys) == 0 && len(wouldAddRepos) == 0 {
 		fmt.Println("Nothing to do; system matches Aptfile.")
 	}
 	return nil
 }
 
-// syncDryRunPlan returns packages that would be installed and that would be removed
-func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string, err error) {
+// syncDryRunPlan returns what a sync would do: packages/repos/keys to add, and packages to remove.
+func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove, wouldAddKeys, wouldAddRepos []string, err error) {
 	state, err := mgr.LoadState()
 	if err != nil {
-		return nil, nil, fmt.Errorf("load state: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("load state: %w", err)
 	}
 	sources, err := apt.ListCustomSources(apt.SourcesListPath, apt.SourcesDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("list sources: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("list sources: %w", err)
 	}
 	sourceLines := make(map[string]bool)
 	for _, e := range sources {
@@ -96,15 +110,30 @@ func syncDryRunPlan(entries []aptfile.Entry) (wouldInstall, wouldRemove []string
 
 	aptfilePackages := extractPackageNames(entries)
 	for _, entry := range entries {
-		if entry.Type != aptfile.EntryTypeApt {
-			continue
-		}
-		pkgName := aptfile.ExtractPkgName(entry.Value)
-		installed, err := mgr.IsPackageInstalled(pkgName)
-		if err != nil || !installed {
-			wouldInstall = append(wouldInstall, entry.Value)
+		switch entry.Type {
+		case aptfile.EntryTypeKey:
+			keyPath := mgr.KeyPathForURL(entry.Value)
+			if _, statErr := os.Stat(keyPath); errors.Is(statErr, os.ErrNotExist) {
+				wouldAddKeys = append(wouldAddKeys, entry.Value)
+			}
+		case aptfile.EntryTypePPA:
+			line := "ppa " + entry.Value
+			if !sourceLines[line] {
+				wouldAddRepos = append(wouldAddRepos, line)
+			}
+		case aptfile.EntryTypeDeb:
+			line := "deb " + entry.Value
+			if !sourceLines[line] {
+				wouldAddRepos = append(wouldAddRepos, line)
+			}
+		case aptfile.EntryTypeApt:
+			pkgName := aptfile.ExtractPkgName(entry.Value)
+			installed, instErr := mgr.IsPackageInstalled(pkgName)
+			if instErr != nil || !installed {
+				wouldInstall = append(wouldInstall, entry.Value)
+			}
 		}
 	}
 	wouldRemove = state.GetPackagesNotIn(aptfilePackages)
-	return wouldInstall, wouldRemove, nil
+	return wouldInstall, wouldRemove, wouldAddKeys, wouldAddRepos, nil
 }

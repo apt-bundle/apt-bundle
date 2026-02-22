@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -72,8 +73,12 @@ func doCheck(aptFilePath string) (ok bool, missing []string, entries []aptfile.E
 
 		case aptfile.EntryTypeKey:
 			keyPath := mgr.KeyPathForURL(entry.Value)
-			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
-				missing = append(missing, "key "+entry.Value)
+			if _, statErr := os.Stat(keyPath); statErr != nil {
+				if errors.Is(statErr, os.ErrNotExist) {
+					missing = append(missing, "key "+entry.Value)
+				} else {
+					return false, nil, nil, fmt.Errorf("checking key %s: %w", entry.Value, statErr)
+				}
 			}
 		}
 	}
