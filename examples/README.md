@@ -26,15 +26,16 @@ The examples are organized by **installation method**, **repository type**, and 
 
 **Best for:** Installing packages from PPAs (PHP, Git, Node.js, etc.)
 
-### 3. Via APT Repository (`3-via-apt-get/`)
-**Production-ready approach** - Install from official APT repository with custom repos.
+### 3. Via APT Repository with Custom Repo (`3-via-apt-get/`)
+**Production-ready approach** - Install from official APT repository; demonstrates the
+`key` + `deb` pattern for adding a custom third-party repository (Docker CLI).
 
 - ✅ Version control
 - ✅ Better caching
 - ✅ Multi-architecture support
-- ✅ Custom repositories with GPG keys
+- ✅ Custom repositories with automatic GPG key management
 
-**Best for:** Production Docker images, CI/CD pipelines, custom repositories
+**Best for:** Production Docker images, CI/CD pipelines, any package from a custom repo
 
 ### 4. Complex via APT Repository (`4-complex-via-apt-get/`)
 **Advanced pattern** - Multi-stage builds with many dependencies using APT repository.
@@ -45,6 +46,18 @@ The examples are organized by **installation method**, **repository type**, and 
 - ✅ Clear separation of concerns
 
 **Best for:** Production applications, complex builds, optimized deployments
+
+### 5. With Lock File (`5-with-lockfile/`)
+**Reproducible builds** - Demonstrates the `Aptfile.lock` workflow for pinning every
+package to an exact version.
+
+- ✅ Fully reproducible installs
+- ✅ Version drift detection
+- ✅ Explicit audit trail of installed versions
+- ✅ Works with any installation method
+
+**Best for:** CI/CD pipelines, team environments, production Docker images where you need
+the exact same package versions on every build
 
 ## Quick Start
 
@@ -76,12 +89,35 @@ make build
 make run
 ```
 
+### Example 5: Reproducible builds with lock file
+```bash
+cd 5-with-lockfile
+make build
+make run
+```
+
+## Feature Coverage Matrix
+
+| Feature | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| Basic `apt` packages | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PPA repositories (`ppa`) | | ✅ | | | |
+| Custom repo GPG key (`key`) | | | ✅ | | |
+| Custom `deb` repository | | | ✅ | | |
+| Multi-stage build | | | | ✅ | |
+| Separate Aptfiles per stage | | | | ✅ | |
+| Lock file (`Aptfile.lock`) | | | | | ✅ |
+| Reproducible `--locked` install | | | | | ✅ |
+| Version pinning in Aptfile | | | | | ✅ |
+| `install.sh` setup | ✅ | ✅ | | | |
+| APT repo setup | | | ✅ | ✅ | ✅ |
+
 ## Repository Types Comparison
 
 | Type | Syntax | GPG Key | Use Case |
 |------|--------|---------|----------|
 | **PPA** | `ppa ppa:user/repo` | ✅ Automatic | Ubuntu community packages |
-| **Custom Repo** | `deb "url"` + `key url` | ⚠️ Manual | Official vendor repos (Docker, etc.) |
+| **Custom Repo** | `key url` + `deb "url"` | ✅ Automatic | Official vendor repos (Docker, Node.js, etc.) |
 
 ## Installation Methods Comparison
 

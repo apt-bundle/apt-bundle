@@ -24,8 +24,8 @@ run: ## Run the container interactively
 	docker run -it $(IMAGE_NAME):$(IMAGE_TAG)
 
 test: ## Test the Docker image
-	docker run --rm $(IMAGE_NAME):$(IMAGE_TAG) bash -c "curl --version && echo '---' && git --version && echo '---' && jq --version"
-	@echo "Verify that curl, git, and jq versions are displayed above (separated by ---)."
+	docker run --rm $(IMAGE_NAME):$(IMAGE_TAG) bash -c "curl --version && echo '---' && git --version && echo '---' && jq --version && echo '---' && docker --version"
+	@echo "Verify that curl, git, jq, and docker versions are displayed above (separated by ---)."
 
 shell: ## Open an interactive shell in the container
 	docker run -it $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash

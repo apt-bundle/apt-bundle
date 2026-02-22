@@ -1,4 +1,12 @@
-# Minimal example demonstrating APT repository installation
+# CI/CD tool dependencies
+
+# Standard utilities
 apt curl
 apt git
 apt jq
+
+# Docker CLI - installed from Docker's official repository
+# 'key' downloads the GPG key; the following 'deb' is automatically signed by it
+key https://download.docker.com/linux/ubuntu/gpg
+deb "[arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+apt docker-ce-cli
