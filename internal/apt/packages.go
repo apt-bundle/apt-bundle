@@ -10,6 +10,25 @@ import (
 // dpkg status string for installed packages
 const dpkgStatusInstalled = "install ok installed"
 
+// packageNameRE validates Debian package names: must start with an alphanumeric,
+// followed by one or more alphanumerics, dots, plus signs, or hyphens.
+// See Debian Policy §5.6.1.
+var packageNameRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9.+\-]+$`)
+
+// validatePackageName checks that a package spec (e.g. "curl" or "nano=2.9.3-2")
+// has a valid Debian package name. Version-pinned specs are split on "=" and
+// only the name portion is validated.
+func validatePackageName(spec string) error {
+	name := spec
+	if idx := strings.Index(spec, "="); idx > 0 {
+		name = spec[:idx]
+	}
+	if !packageNameRE.MatchString(name) {
+		return fmt.Errorf("invalid package name %q: must match Debian naming convention (alphanumeric start, alphanumerics/./+/- only, at least 2 chars)", name)
+	}
+	return nil
+}
+
 // CandidateVersionNone is the apt-cache policy output when no candidate version exists
 const CandidateVersionNone = "(none)"
 
@@ -30,6 +49,9 @@ func (m *AptManager) IsPackageInstalled(packageName string) (bool, error) {
 func (m *AptManager) InstallPackage(packageName string) error {
 	if packageName == "" {
 		return fmt.Errorf("package name cannot be empty")
+	}
+	if err := validatePackageName(packageName); err != nil {
+		return err
 	}
 	fmt.Printf("Installing package: %s\n", packageName)
 

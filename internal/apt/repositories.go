@@ -3,6 +3,7 @@ package apt
 import (
 	"crypto/sha256"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,6 +45,26 @@ func (m *AptManager) AddPPA(ppa string) error {
 
 	fmt.Printf("✓ PPA %s added successfully\n", ppa)
 	return nil
+}
+
+// validateRepoURI ensures the repository URI uses https://. Rejects http://, file://, and other schemes.
+func validateRepoURI(repoURI string) error {
+	u, err := url.Parse(repoURI)
+	if err != nil {
+		return fmt.Errorf("invalid repository URI: %w", err)
+	}
+	switch u.Scheme {
+	case "https":
+		return nil
+	case "http":
+		return fmt.Errorf("repository URI must use https://, not http:// (rejected for security)")
+	case "file":
+		return fmt.Errorf("file:// repository URIs are not allowed (rejected for security)")
+	case "":
+		return fmt.Errorf("invalid repository URI: missing scheme (use https://)")
+	default:
+		return fmt.Errorf("repository URI scheme %q not allowed; use https://", u.Scheme)
+	}
 }
 
 // DebRepository represents a parsed deb repository configuration
@@ -135,6 +156,11 @@ func parseDebLine(line string) (*DebRepository, error) {
 	}
 
 	repo.URIs = parts[0]
+
+	if err := validateRepoURI(repo.URIs); err != nil {
+		return nil, err
+	}
+
 	repo.Suites = parts[1]
 
 	if len(parts) > 2 {

@@ -190,6 +190,56 @@ func TestParseDebLine(t *testing.T) {
 			t.Error("Expected error for empty deb line")
 		}
 	})
+
+	t.Run("rejects http URI", func(t *testing.T) {
+		_, err := parseDebLine("http://example.com/ubuntu jammy main")
+		if err == nil {
+			t.Fatal("Expected error for http:// URI")
+		}
+		if !strings.Contains(err.Error(), "not http://") {
+			t.Errorf("Expected http rejection message, got: %s", err.Error())
+		}
+	})
+
+	t.Run("rejects file URI", func(t *testing.T) {
+		_, err := parseDebLine("file:///local/repo jammy main")
+		if err == nil {
+			t.Fatal("Expected error for file:// URI")
+		}
+		if !strings.Contains(err.Error(), "file://") {
+			t.Errorf("Expected file:// rejection message, got: %s", err.Error())
+		}
+	})
+
+	t.Run("rejects ftp URI", func(t *testing.T) {
+		_, err := parseDebLine("ftp://example.com/ubuntu jammy main")
+		if err == nil {
+			t.Fatal("Expected error for ftp:// URI")
+		}
+		if !strings.Contains(err.Error(), "not allowed") {
+			t.Errorf("Expected scheme rejection message, got: %s", err.Error())
+		}
+	})
+
+	t.Run("rejects missing scheme", func(t *testing.T) {
+		_, err := parseDebLine("example.com/ubuntu jammy main")
+		if err == nil {
+			t.Fatal("Expected error for URI without scheme")
+		}
+		if !strings.Contains(err.Error(), "missing scheme") {
+			t.Errorf("Expected missing scheme message, got: %s", err.Error())
+		}
+	})
+
+	t.Run("accepts https URI", func(t *testing.T) {
+		repo, err := parseDebLine("https://example.com/ubuntu jammy main")
+		if err != nil {
+			t.Fatalf("Expected no error for https URI, got: %v", err)
+		}
+		if repo.URIs != "https://example.com/ubuntu" {
+			t.Errorf("Expected URI 'https://example.com/ubuntu', got '%s'", repo.URIs)
+		}
+	})
 }
 
 func TestDebRepositoryToDEB822(t *testing.T) {

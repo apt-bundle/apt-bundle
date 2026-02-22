@@ -3,6 +3,7 @@ package apt
 import (
 	"errors"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/apt-bundle/apt-bundle/internal/testutil"
@@ -55,6 +56,39 @@ func TestIsPackageInstalled(t *testing.T) {
 	})
 }
 
+func TestValidatePackageName(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    string
+		wantErr bool
+	}{
+		{"valid simple", "curl", false},
+		{"valid with hyphen", "apt-get", false},
+		{"valid with dot", "libgcc1.0", false},
+		{"valid with plus", "g++", false},
+		{"valid version pinned", "nano=2.9.3-2", false},
+		{"valid mixed", "lib2to3", false},
+		{"invalid single char", "a", true},
+		{"invalid starts with hyphen", "-bad", true},
+		{"invalid starts with dot", ".bad", true},
+		{"invalid shell metachar", "pkg;rm -rf /", true},
+		{"invalid space", "pkg name", true},
+		{"invalid backtick", "pkg`cmd`", true},
+		{"invalid dollar", "pkg$var", true},
+		{"invalid pipe", "pkg|cat", true},
+		{"invalid ampersand", "pkg&&cmd", true},
+		{"invalid slash", "../etc/passwd", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePackageName(tt.spec)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validatePackageName(%q) error = %v, wantErr %v", tt.spec, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestInstallPackage(t *testing.T) {
 	t.Run("install without sudo", func(t *testing.T) {
 		m := NewAptManager()
@@ -69,6 +103,17 @@ func TestInstallPackage(t *testing.T) {
 		err := m.InstallPackage("")
 		if err == nil {
 			t.Error("InstallPackage('') should fail for empty package name")
+		}
+	})
+
+	t.Run("rejects invalid package name", func(t *testing.T) {
+		m := NewAptManager()
+		err := m.InstallPackage("pkg;rm -rf /")
+		if err == nil {
+			t.Error("InstallPackage should reject invalid package names")
+		}
+		if err != nil && !strings.Contains(err.Error(), "invalid package name") {
+			t.Errorf("Expected invalid package name error, got: %s", err.Error())
 		}
 	})
 }
