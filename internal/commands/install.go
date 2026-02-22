@@ -3,8 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -161,29 +159,11 @@ func runInstall(cmd *cobra.Command, args []string) error {
 }
 
 func writeLockFileFromPackages(packages []string) error {
-	type pkgVer struct {
-		pkg string
-		ver string
-	}
-	var locked []pkgVer
-	for _, pkg := range packages {
-		pkgName := aptfile.ExtractPkgName(pkg)
-		ver, err := mgr.GetInstalledVersion(pkgName)
-		if err != nil || ver == "" {
-			continue
-		}
-		locked = append(locked, pkgVer{pkg: pkgName, ver: ver})
-	}
+	locked, _ := resolveInstalledVersions(packages)
 	if len(locked) == 0 {
 		return nil
 	}
-	sort.Slice(locked, func(i, j int) bool { return locked[i].pkg < locked[j].pkg })
-	path := getLockFilePath()
-	var lines []string
-	for _, pv := range locked {
-		lines = append(lines, pv.pkg+"="+pv.ver)
-	}
-	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	return writeLockFileEntries(locked)
 }
 
 func runInstallDryRun(entries []aptfile.Entry) error {

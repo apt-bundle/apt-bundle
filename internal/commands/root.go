@@ -17,6 +17,9 @@ var (
 // mgr is the AptManager used by all commands.
 var mgr = apt.NewAptManager()
 
+// rootCmd is the base command for apt-bundle.
+// Note: rootCmd.RunE is set to runInstall by install.go's init() function,
+// making "install" the default command when apt-bundle is run with no subcommand.
 var rootCmd = &cobra.Command{
 	Use:   "apt-bundle",
 	Short: "A declarative package manager for apt",
