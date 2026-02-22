@@ -154,7 +154,7 @@ func (m *AptManager) dearmorKey(data []byte) ([]byte, error) {
 }
 
 // RemoveGPGKey removes a GPG key file
-func RemoveGPGKey(keyPath string) error {
+func (m *AptManager) RemoveGPGKey(keyPath string) error {
 	if err := os.Remove(keyPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove key: %w", err)
 	}

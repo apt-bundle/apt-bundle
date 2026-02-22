@@ -17,6 +17,12 @@ const (
 	SourcesPrefix = "apt-bundle-"
 )
 
+// optionsRegex matches bracketed options in a deb line, e.g. [arch=amd64]
+var optionsRegex = regexp.MustCompile(`^\[([^\]]+)\]\s*`)
+
+// archRegex extracts the arch= value from bracketed options
+var archRegex = regexp.MustCompile(`arch=([^\s]+)`)
+
 // isUbuntu checks if the current system is Ubuntu by reading /etc/os-release.
 // Parses key=value pairs properly to avoid false positives from fields like
 // PRETTY_NAME or derivative distro IDs.
@@ -97,7 +103,7 @@ type DebRepository struct {
 
 // AddDebRepository adds a deb repository in DEB822 format to /etc/apt/sources.list.d/
 // keyPath is optional - if provided, it will be used for the Signed-By field
-func AddDebRepository(repoLine string, keyPath string) (string, error) {
+func (m *AptManager) AddDebRepository(repoLine string, keyPath string) (string, error) {
 	fmt.Printf("Adding deb repository: %s\n", repoLine)
 
 	repo, err := parseDebLine(repoLine)
@@ -112,8 +118,8 @@ func AddDebRepository(repoLine string, keyPath string) (string, error) {
 
 	// Generate filename from repo hash
 	hash := sha256.Sum256([]byte(repoLine))
-	filename := fmt.Sprintf("%s%x.sources", SourcesPrefix, hash[:8])
-	sourcePath := filepath.Join(SourcesDir, filename)
+	filename := fmt.Sprintf("%s%x.sources", m.SourcesPrefix, hash[:8])
+	sourcePath := filepath.Join(m.SourcesDir, filename)
 
 	// Check if source already exists (idempotency)
 	if _, err := os.Stat(sourcePath); err == nil {
@@ -122,7 +128,7 @@ func AddDebRepository(repoLine string, keyPath string) (string, error) {
 	}
 
 	// Ensure the sources directory exists
-	if err := os.MkdirAll(SourcesDir, 0755); err != nil {
+	if err := os.MkdirAll(m.SourcesDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create sources directory: %w", err)
 	}
 
@@ -155,13 +161,11 @@ func parseDebLine(line string) (*DebRepository, error) {
 	}
 
 	// Extract options in brackets [key=value key2=value2]
-	optionsRegex := regexp.MustCompile(`^\[([^\]]+)\]\s*`)
 	if matches := optionsRegex.FindStringSubmatch(line); len(matches) > 1 {
 		options := matches[1]
 		line = optionsRegex.ReplaceAllString(line, "")
 
 		// Parse arch option
-		archRegex := regexp.MustCompile(`arch=([^\s]+)`)
 		if archMatches := archRegex.FindStringSubmatch(options); len(archMatches) > 1 {
 			repo.Architectures = archMatches[1]
 		}
@@ -212,7 +216,7 @@ func (r *DebRepository) ToDEB822() string {
 }
 
 // RemoveDebRepository removes a sources file
-func RemoveDebRepository(sourcePath string) error {
+func (m *AptManager) RemoveDebRepository(sourcePath string) error {
 	if err := os.Remove(sourcePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove sources file: %w", err)
 	}

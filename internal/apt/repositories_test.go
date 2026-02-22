@@ -342,9 +342,14 @@ func TestAddDebRepository(t *testing.T) {
 			t.Fatalf("Failed to create fake key file: %v", err)
 		}
 
+		m := &AptManager{
+			SourcesDir:    tmpDir,
+			SourcesPrefix: "apt-bundle-",
+		}
+
 		// This will fail without write permissions to /etc/apt/sources.list.d
 		// but we can verify it doesn't panic and handles the error
-		_, err := AddDebRepository(repoLine, keyPath)
+		_, err := m.AddDebRepository(repoLine, keyPath)
 		if err != nil {
 			// Expected to fail in test environment
 			t.Logf("AddDebRepository failed (expected in test): %v", err)
@@ -354,6 +359,7 @@ func TestAddDebRepository(t *testing.T) {
 
 func TestRemoveDebRepository(t *testing.T) {
 	tmpDir := t.TempDir()
+	m := &AptManager{}
 
 	t.Run("remove existing source", func(t *testing.T) {
 		sourcePath := filepath.Join(tmpDir, "test.sources")
@@ -361,7 +367,7 @@ func TestRemoveDebRepository(t *testing.T) {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 
-		err := RemoveDebRepository(sourcePath)
+		err := m.RemoveDebRepository(sourcePath)
 		if err != nil {
 			t.Errorf("RemoveDebRepository failed: %v", err)
 		}
@@ -372,7 +378,7 @@ func TestRemoveDebRepository(t *testing.T) {
 	})
 
 	t.Run("remove nonexistent source", func(t *testing.T) {
-		err := RemoveDebRepository(filepath.Join(tmpDir, "nonexistent.sources"))
+		err := m.RemoveDebRepository(filepath.Join(tmpDir, "nonexistent.sources"))
 		if err != nil {
 			t.Errorf("RemoveDebRepository should not error for nonexistent file: %v", err)
 		}

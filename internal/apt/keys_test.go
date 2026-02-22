@@ -120,6 +120,7 @@ mQINBF...
 
 func TestRemoveGPGKey(t *testing.T) {
 	tmpDir := t.TempDir()
+	m := &AptManager{}
 
 	t.Run("remove existing key", func(t *testing.T) {
 		keyPath := filepath.Join(tmpDir, "test.gpg")
@@ -127,7 +128,7 @@ func TestRemoveGPGKey(t *testing.T) {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 
-		err := RemoveGPGKey(keyPath)
+		err := m.RemoveGPGKey(keyPath)
 		if err != nil {
 			t.Errorf("RemoveGPGKey failed: %v", err)
 		}
@@ -138,7 +139,7 @@ func TestRemoveGPGKey(t *testing.T) {
 	})
 
 	t.Run("remove nonexistent key", func(t *testing.T) {
-		err := RemoveGPGKey(filepath.Join(tmpDir, "nonexistent.gpg"))
+		err := m.RemoveGPGKey(filepath.Join(tmpDir, "nonexistent.gpg"))
 		if err != nil {
 			t.Errorf("RemoveGPGKey should not error for nonexistent file: %v", err)
 		}

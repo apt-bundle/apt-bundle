@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-// SourcesListPath is the path to the main sources.list (overridable for testing)
+// SourcesListPath is the path to the main apt sources.list file.
+// It is exported as a package-level variable solely to allow test
+// overrides; production code should not modify it. Prefer passing
+// the path explicitly to ListCustomSources.
 var SourcesListPath = "/etc/apt/sources.list"
 
 // SourceEntry represents one repository line to emit in an Aptfile
@@ -89,7 +92,10 @@ func ListCustomSources(sourcesListPath, sourcesDir string) ([]SourceEntry, error
 		return nil, fmt.Errorf("reading %s: %w", sourcesListPath, err)
 	}
 	if err == nil {
-		lines, _ := splitLines(string(data))
+		lines, scanErr := splitLines(string(data))
+		if scanErr != nil {
+			return nil, fmt.Errorf("scanning %s: %w", sourcesListPath, scanErr)
+		}
 		for _, line := range lines {
 			if e, ok := parseDebLineToSource(line); ok && !seen[e.AptfileLine] {
 				seen[e.AptfileLine] = true
@@ -171,7 +177,10 @@ func readDEB822File(path string) ([]SourceEntry, error) {
 		return nil, err
 	}
 
-	lines, _ := splitLines(string(data))
+	lines, err := splitLines(string(data))
+	if err != nil {
+		return nil, fmt.Errorf("scanning %s: %w", path, err)
+	}
 	var entries []SourceEntry
 	var stanzaLines []string
 
@@ -199,6 +208,8 @@ func readDEB822File(path string) ([]SourceEntry, error) {
 }
 
 // parseDEB822Stanza parses a single DEB822 stanza (key-value pairs) into a SourceEntry.
+// Note: composite "Types: deb deb-src" is not yet handled; such stanzas
+// are treated as "deb" only. TODO: handle "deb deb-src" correctly.
 func parseDEB822Stanza(lines []string) (SourceEntry, bool) {
 	var types, uris, suites, components, architectures string
 	for _, line := range lines {

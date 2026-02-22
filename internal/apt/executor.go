@@ -11,8 +11,7 @@ var _ Executor = (*realExecutor)(nil)
 
 func (e *realExecutor) Run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	// stdout and stderr are nil by default — command output goes to /dev/null
 	return cmd.Run()
 }
 

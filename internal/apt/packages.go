@@ -13,7 +13,7 @@ const dpkgStatusInstalled = "install ok installed"
 // packageNameRE validates Debian package names: must start with an alphanumeric,
 // followed by one or more alphanumerics, dots, plus signs, or hyphens.
 // See Debian Policy §5.6.1.
-var packageNameRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9.+\-]+$`)
+var packageNameRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9.+-]+$`)
 
 // validatePackageName checks that a package spec (e.g. "curl" or "nano=2.9.3-2")
 // has a valid Debian package name. Version-pinned specs are split on "=" and

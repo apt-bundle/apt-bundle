@@ -2,6 +2,8 @@ package apt
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -40,15 +42,15 @@ func (m *AptManager) LoadState() (*State, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return NewState(), nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("load state from %s: %w", path, err)
 	}
 
 	var state State
 	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load state from %s: %w", path, err)
 	}
 
 	return &state, nil
@@ -61,7 +63,7 @@ func (m *AptManager) SaveState(s *State) error {
 	// Ensure the directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+		return fmt.Errorf("create state directory %s: %w", dir, err)
 	}
 
 	data, err := json.MarshalIndent(s, "", "  ")
@@ -69,7 +71,10 @@ func (m *AptManager) SaveState(s *State) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("write state file %s: %w", path, err)
+	}
+	return nil
 }
 
 // AddPackage adds a package to the state if not already present

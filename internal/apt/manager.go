@@ -22,6 +22,8 @@ type AptManager struct {
 	LookPath      func(string) (string, error)
 	OsReleasePath string
 	StatePath     func() string
+	SourcesDir    string
+	SourcesPrefix string
 }
 
 // NewAptManager creates an AptManager with production defaults.
@@ -33,5 +35,7 @@ func NewAptManager() *AptManager {
 		LookPath:      exec.LookPath,
 		OsReleasePath: "/etc/os-release",
 		StatePath:     func() string { return filepath.Join(StateDir, StateFile) },
+		SourcesDir:    SourcesDir,
+		SourcesPrefix: SourcesPrefix,
 	}
 }

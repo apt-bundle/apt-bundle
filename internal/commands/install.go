@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -57,6 +58,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
+	// Persist state on exit regardless of success or failure so partially
+	// completed installs (keys/repos already added) are not orphaned.
+	defer func() {
+		if saveErr := mgr.SaveState(state); saveErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to save state: %v\n", saveErr)
+		}
+	}()
 
 	var pendingKeyPath string
 	var reposAdded bool
@@ -75,10 +83,11 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			if err := mgr.AddPPA(entry.Value); err != nil {
 				return fmt.Errorf("failed to add PPA: %w", err)
 			}
+			pendingKeyPath = "" // Clear: PPA manages its own keys; don't leak to next deb entry
 			reposAdded = true
 
 		case aptfile.EntryTypeDeb:
-			sourcePath, err := apt.AddDebRepository(entry.Value, pendingKeyPath)
+			sourcePath, err := mgr.AddDebRepository(entry.Value, pendingKeyPath)
 			if err != nil {
 				return fmt.Errorf("failed to add repository: %w", err)
 			}
@@ -88,14 +97,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if reposAdded || !noUpdate {
-		if !noUpdate {
-			if err := mgr.Update(); err != nil {
-				return fmt.Errorf("failed to update package lists: %w", err)
-			}
-		} else if reposAdded {
-			fmt.Println("⚠️  Warning: Repositories were added; run without --no-update to fetch package lists.")
+	if !noUpdate {
+		if err := mgr.Update(); err != nil {
+			return fmt.Errorf("failed to update package lists: %w", err)
 		}
+	} else if reposAdded {
+		fmt.Println("⚠️  Warning: Repositories were added; run without --no-update to fetch package lists.")
 	}
 
 	packagesToInstall := []string{}
@@ -141,11 +148,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Println("No packages to install")
 	}
 
-	// Save the updated state
-	if err := mgr.SaveState(state); err != nil {
-		return fmt.Errorf("failed to save state: %w", err)
-	}
-
 	if installLock && len(packagesToInstall) > 0 {
 		if err := writeLockFileFromPackages(packagesToInstall); err != nil {
 			return fmt.Errorf("failed to write lock file: %w", err)
@@ -156,6 +158,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 }
 
 func writeLockFileFromPackages(packages []string) error {
+	// The skipped-packages list is intentionally dropped here; unlike the
+	// standalone lock command, install --lock does not warn about uninstalled packages.
 	locked, _ := resolveInstalledVersions(packages)
 	if len(locked) == 0 {
 		return nil
@@ -178,7 +182,7 @@ func runInstallDryRun(entries []aptfile.Entry) error {
 		switch entry.Type {
 		case aptfile.EntryTypeKey:
 			keyPath := mgr.KeyPathForURL(entry.Value)
-			if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+			if _, err := os.Stat(keyPath); errors.Is(err, os.ErrNotExist) {
 				wouldAddKeys = append(wouldAddKeys, entry.Value)
 			}
 		case aptfile.EntryTypePPA:
