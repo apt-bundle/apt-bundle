@@ -19,6 +19,7 @@ A declarative package manager for apt, inspired by Homebrew's `brew bundle`.
 - **Repository & Key Management**: Add PPAs, custom repositories, and GPG keys
 - **Version Pinning**: Install specific package versions
 - **Simple CLI**: Easy-to-use command-line interface
+- **GitHub Actions Integration**: Native action with built-in caching for CI/CD
 
 ## Quick Start
 
@@ -54,12 +55,13 @@ Replace long, unmaintainable `RUN apt-get install -y ...` lines with a simple `A
 Use `apt-bundle dump > Aptfile` on your primary workstation and then `sudo apt-bundle` on a new laptop to sync your tools.
 
 ### CI/CD
-Use `apt-bundle check` to validate that the build environment has the necessary dependencies.
+Use the [GitHub Action](github-actions.html) for seamless integration with GitHub workflows, including built-in package caching and reproducible builds via lockfiles.
 
 ## Documentation
 
 - [Installation](installation.html) - How to install apt-bundle
 - [Usage](usage.html) - Command reference and examples
+- [GitHub Actions](github-actions.html) - Using apt-bundle in GitHub workflows
 - [Aptfile Format](aptfile-format.html) - Complete syntax reference
 - [Contributing](contributing.html) - Contributing and development setup
 - [API Reference](api-reference.html) - Go package documentation

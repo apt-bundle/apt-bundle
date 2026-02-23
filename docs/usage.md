@@ -147,13 +147,26 @@ sudo apt-bundle
 
 Use `apt-bundle` in your Dockerfiles to manage system dependencies declaratively. See the [examples directory](../../examples/) for complete working examples including multi-stage builds, Python runtimes, CI/CD setups, and more.
 
-### CI/CD Validation
+### CI/CD with GitHub Actions
+
+The [`apt-bundle/apt-bundle-action`](https://github.com/apt-bundle/apt-bundle-action) GitHub Action provides a streamlined integration with built-in package caching:
 
 ```yaml
 # .github/workflows/test.yml
-- name: Check dependencies
-  run: apt-bundle check
+- name: Install system dependencies
+  uses: apt-bundle/apt-bundle-action@v1
 ```
+
+To validate dependencies without installing (e.g. in a lint step):
+
+```yaml
+- name: Check dependencies
+  uses: apt-bundle/apt-bundle-action@v1
+  with:
+    mode: check
+```
+
+See the [GitHub Actions](github-actions.html) page for the full reference.
 
 ### System Sync
 

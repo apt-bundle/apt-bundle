@@ -3,12 +3,17 @@ name: Update APT Repository
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   update-apt-repo:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,12 +21,34 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve release tag
+        id: tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" | \
+              jq -r '.tag_name // empty')
+          fi
+          if [ -z "$TAG" ]; then
+            echo "No release found, skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install APT tools
+        if: steps.tag.outputs.skip != 'true'
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
 
       - name: Update APT repository
+        if: steps.tag.outputs.skip != 'true'
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           VERSION="${TAG#v}"
           cd docs/repo && ./update-repo.sh "$VERSION"
@@ -32,8 +59,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Commit and push
+        if: steps.tag.outputs.skip != 'true'
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           git add docs/repo/
           if git diff --staged --quiet; then

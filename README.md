@@ -1,5 +1,7 @@
 # apt-bundle
 
+[![CI](https://github.com/apt-bundle/apt-bundle/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/apt-bundle/apt-bundle/actions/workflows/ci.yml)
+
 A declarative, Brewfile-like wrapper for `apt`, inspired by `brew bundle` — not a full config management system.
 
 **[📚 Full Documentation](https://apt-bundle.github.io/apt-bundle/)** | [Installation](#installation) | [Usage](#usage)
@@ -310,15 +312,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## Roadmap
-
-- [x] Core functionality (install, dump, check)
-- [x] Package version handling
-- [x] PPA management
-- [x] Custom repository management
-- [x] GPG key management
-- [x] CI/CD pipeline
-- [x] Release automation
-- [ ] Expand test coverage
-
