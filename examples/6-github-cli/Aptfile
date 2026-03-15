@@ -1,0 +1,6 @@
+# GitHub CLI - https://cli.github.com
+# 'key' downloads and saves the GPG key; the following 'deb' is automatically
+# signed by it (Signed-By is set in the generated DEB822 sources file).
+key https://cli.github.com/packages/githubcli-archive-keyring.gpg
+deb "[arch=amd64] https://cli.github.com/packages stable main"
+apt gh

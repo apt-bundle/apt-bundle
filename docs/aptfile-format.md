@@ -87,6 +87,25 @@ deb "[arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 - This directive only adds the repository line; it does not add the GPG key
 - You must use the `key` directive separately to add the required GPG key
 - Repository lines can include options like `[arch=amd64]` or `[trusted=yes]`
+- `signed-by=<path>` is supported in the options block and takes precedence over the implicit key linking from a preceding `key` directive; this is useful for copy-paste compatibility with official installation docs
+
+**Recommended pattern** — use `key` + `deb` without `signed-by=`; apt-bundle automatically links them:
+
+```aptfile
+key https://cli.github.com/packages/githubcli-archive-keyring.gpg
+deb "[arch=amd64] https://cli.github.com/packages stable main"
+apt gh
+```
+
+**Advanced / copy-paste from official docs** — explicit `signed-by=` is also accepted:
+
+```aptfile
+key https://cli.github.com/packages/githubcli-archive-keyring.gpg
+deb "[arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+apt gh
+```
+
+When using the explicit form, the path in `signed-by=` must already exist on the system (e.g. written by the `key` directive to `/etc/apt/keyrings/`).
 
 ### `key` - Add GPG Key
 
@@ -195,6 +214,17 @@ apt docker-ce-cli
 apt containerd.io
 apt docker-compose-plugin
 ```
+
+### GitHub CLI
+
+```aptfile
+key https://cli.github.com/packages/githubcli-archive-keyring.gpg
+deb "[arch=amd64] https://cli.github.com/packages stable main"
+apt gh
+```
+
+The `signed-by=` form from the official GitHub CLI docs is also accepted if you prefer
+to copy-paste it directly.
 
 ### Language-Specific Setup
 

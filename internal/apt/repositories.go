@@ -21,7 +21,10 @@ const (
 var optionsRegex = regexp.MustCompile(`^\[([^\]]+)\]\s*`)
 
 // archRegex extracts the arch= value from bracketed options
-var archRegex = regexp.MustCompile(`arch=([^\s]+)`)
+var archRegex = regexp.MustCompile(`arch=([^\s\]]+)`)
+
+// signedByRegex extracts the signed-by= value from bracketed options
+var signedByRegex = regexp.MustCompile(`signed-by=([^\s\]]+)`)
 
 // isUbuntu checks if the current system is Ubuntu by reading /etc/os-release.
 // Parses key=value pairs properly to avoid false positives from fields like
@@ -111,8 +114,8 @@ func (m *AptManager) AddDebRepository(repoLine string, keyPath string) (string, 
 		return "", fmt.Errorf("failed to parse deb line: %w", err)
 	}
 
-	// Set the Signed-By field if a key path was provided
-	if keyPath != "" {
+	// Explicit signed-by= in the deb line takes precedence over the implicit pendingKeyPath.
+	if keyPath != "" && repo.SignedBy == "" {
 		repo.SignedBy = keyPath
 	}
 
@@ -168,6 +171,10 @@ func parseDebLine(line string) (*DebRepository, error) {
 		// Parse arch option
 		if archMatches := archRegex.FindStringSubmatch(options); len(archMatches) > 1 {
 			repo.Architectures = archMatches[1]
+		}
+		// Parse signed-by option
+		if sbMatches := signedByRegex.FindStringSubmatch(options); len(sbMatches) > 1 {
+			repo.SignedBy = sbMatches[1]
 		}
 	}
 

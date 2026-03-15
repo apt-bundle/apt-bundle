@@ -59,6 +59,19 @@ package to an exact version.
 **Best for:** CI/CD pipelines, team environments, production Docker images where you need
 the exact same package versions on every build
 
+### 6. GitHub CLI (`6-github-cli/`)
+**Real-world third-party repo** - Installs GitHub CLI (`gh`) from its official APT
+repository; demonstrates the `key` + `deb` pattern and the new `signed-by=` option
+support for copy-paste compatibility with official installation docs.
+
+- ✅ Custom repo GPG key (`key` directive)
+- ✅ Custom `deb` repository
+- ✅ `signed-by=` in deb options (copy-paste from official docs)
+- ✅ Traditional equivalent for comparison
+
+**Best for:** Any package from a vendor-hosted APT repository that ships official
+installation instructions with `signed-by=` in the deb line
+
 ## Quick Start
 
 ### Example 1: Simple install.sh approach
@@ -96,21 +109,29 @@ make build
 make run
 ```
 
+### Example 6: GitHub CLI
+```bash
+cd 6-github-cli
+make build
+make test
+```
+
 ## Feature Coverage Matrix
 
-| Feature | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| Basic `apt` packages | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PPA repositories (`ppa`) | | ✅ | | | |
-| Custom repo GPG key (`key`) | | | ✅ | | |
-| Custom `deb` repository | | | ✅ | | |
-| Multi-stage build | | | | ✅ | |
-| Separate Aptfiles per stage | | | | ✅ | |
-| Lock file (`Aptfile.lock`) | | | | | ✅ |
-| Reproducible `--locked` install | | | | | ✅ |
-| Version pinning in Aptfile | | | | | ✅ |
-| `install.sh` setup | ✅ | ✅ | | | |
-| APT repo setup | | | ✅ | ✅ | ✅ |
+| Feature | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Basic `apt` packages | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PPA repositories (`ppa`) | | ✅ | | | | |
+| Custom repo GPG key (`key`) | | | ✅ | | | ✅ |
+| Custom `deb` repository | | | ✅ | | | ✅ |
+| `signed-by=` in deb options | | | | | | ✅ |
+| Multi-stage build | | | | ✅ | | |
+| Separate Aptfiles per stage | | | | ✅ | | |
+| Lock file (`Aptfile.lock`) | | | | | ✅ | |
+| Reproducible `--locked` install | | | | | ✅ | |
+| Version pinning in Aptfile | | | | | ✅ | |
+| `install.sh` setup | ✅ | ✅ | | | | |
+| APT repo setup | | | ✅ | ✅ | ✅ | ✅ |
 
 ## Repository Types Comparison
 

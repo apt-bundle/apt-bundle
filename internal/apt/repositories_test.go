@@ -273,6 +273,48 @@ func TestParseDebLine(t *testing.T) {
 			t.Errorf("Expected URI 'https://example.com/ubuntu', got '%s'", repo.URIs)
 		}
 	})
+
+	t.Run("deb line with signed-by option", func(t *testing.T) {
+		repo, err := parseDebLine("[signed-by=/etc/apt/keyrings/test.gpg] https://example.com/repo stable main")
+		if err != nil {
+			t.Fatalf("parseDebLine failed: %v", err)
+		}
+		if repo.SignedBy != "/etc/apt/keyrings/test.gpg" {
+			t.Errorf("Expected SignedBy '/etc/apt/keyrings/test.gpg', got '%s'", repo.SignedBy)
+		}
+		if repo.Architectures != "" {
+			t.Errorf("Expected empty Architectures, got '%s'", repo.Architectures)
+		}
+	})
+
+	t.Run("deb line with arch and signed-by options", func(t *testing.T) {
+		repo, err := parseDebLine("[arch=amd64 signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main")
+		if err != nil {
+			t.Fatalf("parseDebLine failed: %v", err)
+		}
+		if repo.Architectures != "amd64" {
+			t.Errorf("Expected Architectures 'amd64', got '%s'", repo.Architectures)
+		}
+		if repo.SignedBy != "/etc/apt/keyrings/githubcli.gpg" {
+			t.Errorf("Expected SignedBy '/etc/apt/keyrings/githubcli.gpg', got '%s'", repo.SignedBy)
+		}
+		if repo.URIs != "https://cli.github.com/packages" {
+			t.Errorf("Expected URI 'https://cli.github.com/packages', got '%s'", repo.URIs)
+		}
+	})
+
+	t.Run("deb line with signed-by but no arch", func(t *testing.T) {
+		repo, err := parseDebLine("[signed-by=/etc/apt/keyrings/myrepo.gpg] https://example.com/repo focal main")
+		if err != nil {
+			t.Fatalf("parseDebLine failed: %v", err)
+		}
+		if repo.SignedBy != "/etc/apt/keyrings/myrepo.gpg" {
+			t.Errorf("Expected SignedBy '/etc/apt/keyrings/myrepo.gpg', got '%s'", repo.SignedBy)
+		}
+		if repo.Architectures != "" {
+			t.Errorf("Expected empty Architectures, got '%s'", repo.Architectures)
+		}
+	})
 }
 
 func TestDebRepositoryToDEB822(t *testing.T) {
@@ -373,6 +415,37 @@ func TestAddDebRepository(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "https") {
 			t.Errorf("Expected https rejection message, got: %v", err)
+		}
+	})
+
+	t.Run("explicit signed-by overrides keyPath", func(t *testing.T) {
+		repoLine := "[arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+		keyPath := filepath.Join(tmpDir, "implicit.gpg")
+
+		if err := os.WriteFile(keyPath, []byte("fake key"), 0644); err != nil {
+			t.Fatalf("Failed to create fake key file: %v", err)
+		}
+
+		m := &AptManager{
+			SourcesDir:    tmpDir,
+			SourcesPrefix: "apt-bundle-explicit-",
+		}
+
+		sourcePath, err := m.AddDebRepository(repoLine, keyPath)
+		if err != nil {
+			t.Fatalf("AddDebRepository failed: %v", err)
+		}
+
+		content, err := os.ReadFile(sourcePath)
+		if err != nil {
+			t.Fatalf("Failed to read sources file: %v", err)
+		}
+
+		if !strings.Contains(string(content), "Signed-By: /etc/apt/keyrings/githubcli-archive-keyring.gpg") {
+			t.Errorf("Expected explicit signed-by path in sources file, got:\n%s", content)
+		}
+		if strings.Contains(string(content), keyPath) {
+			t.Errorf("keyPath should NOT appear in sources file when deb line has signed-by=, got:\n%s", content)
 		}
 	})
 }
