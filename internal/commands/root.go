@@ -12,6 +12,7 @@ var (
 	aptfilePath string
 	noUpdate    bool
 	version     = "dev"
+	commit      = "unknown"
 )
 
 // mgr is the AptManager used by all commands.
@@ -26,7 +27,6 @@ var rootCmd = &cobra.Command{
 	Long: `apt-bundle provides a simple, declarative, and shareable way to manage
 apt packages and repositories on Debian-based systems, inspired by Homebrew's
 brew bundle.`,
-	Version: version,
 }
 
 func Execute() error {
@@ -34,6 +34,7 @@ func Execute() error {
 }
 
 func init() {
+	rootCmd.Version = version + " (" + commit + ")"
 	rootCmd.PersistentFlags().StringVarP(&aptfilePath, "file", "f", "Aptfile", "Path to Aptfile")
 	rootCmd.PersistentFlags().BoolVar(&noUpdate, "no-update", false, "Skip updating package lists before installing")
 }

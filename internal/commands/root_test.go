@@ -2,6 +2,7 @@ package commands
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -38,6 +39,13 @@ func TestRootCmd(t *testing.T) {
 
 		if rootCmd.Version == "" {
 			t.Error("rootCmd.Version should not be empty")
+		}
+	})
+
+	t.Run("version flag format", func(t *testing.T) {
+		v := rootCmd.Version
+		if !strings.Contains(v, " (") || !strings.HasSuffix(v, ")") {
+			t.Errorf("rootCmd.Version %q does not match expected format '<version> (<commit>)'", v)
 		}
 	})
 
@@ -89,6 +97,20 @@ func TestCheckRoot(t *testing.T) {
 			if err == nil {
 				t.Error("checkRoot() should return error when not running as root")
 			}
+		}
+	})
+}
+
+func TestVersionVariables(t *testing.T) {
+	t.Run("version defaults to dev", func(t *testing.T) {
+		if version != "dev" {
+			t.Errorf("version = %q, want %q", version, "dev")
+		}
+	})
+
+	t.Run("commit defaults to unknown", func(t *testing.T) {
+		if commit != "unknown" {
+			t.Errorf("commit = %q, want %q", commit, "unknown")
 		}
 	})
 }

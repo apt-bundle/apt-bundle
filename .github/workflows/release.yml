@@ -121,9 +121,14 @@ jobs:
           NFPM_ARCH: ${{ matrix.debarch }}
         run: |
           # Build binary for this architecture
+          COMMIT=$(git rev-parse --short HEAD)
           mkdir -p build dist
           CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} GOARM=${GOARM} \
-            go build -ldflags="-s -w" -o build/apt-bundle ./cmd/apt-bundle
+            go build \
+              -ldflags="-s -w \
+                -X github.com/apt-bundle/apt-bundle/internal/commands.version=${VERSION} \
+                -X github.com/apt-bundle/apt-bundle/internal/commands.commit=${COMMIT}" \
+              -o build/apt-bundle ./cmd/apt-bundle
           
           # Substitute template variables in nfpm config
           # nfpm v2 doesn't automatically process {{ .Version }} and {{ .Arch }} templates

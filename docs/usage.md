@@ -65,7 +65,7 @@ This command outputs a list of manually installed packages. Future versions may 
 
 - `--file, -f`: Specify the path to the Aptfile (default: `./Aptfile`)
 - `--help, -h`: Show help information
-- `--version`: Show version information
+- `--version`: Show version and build information (e.g. `0.2.54 (abc1234)`)
 
 ### Install Command Flags
 

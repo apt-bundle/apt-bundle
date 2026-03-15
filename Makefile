@@ -4,7 +4,10 @@ BINARY_NAME=apt-bundle
 BUILD_DIR=build
 GO=go
 VERSION := $(shell cat VERSION | tr -d '[:space:]').0
-GOFLAGS=-ldflags="-s -w -X github.com/apt-bundle/apt-bundle/internal/commands.version=$(VERSION)"
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GOFLAGS=-ldflags="-s -w \
+  -X github.com/apt-bundle/apt-bundle/internal/commands.version=$(VERSION) \
+  -X github.com/apt-bundle/apt-bundle/internal/commands.commit=$(COMMIT)"
 INSTALL_DIR ?= /usr/local/bin
 USE_SUDO ?= sudo
 
