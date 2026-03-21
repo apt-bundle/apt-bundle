@@ -21,6 +21,7 @@ var SourcesListPath = "/etc/apt/sources.list"
 type SourceEntry struct {
 	Type        string // "ppa" or "deb"
 	AptfileLine string
+	KeyURL      string // source URL of the associated GPG key, if known (from companion .url file)
 }
 
 // defaultURIs are distro default repository hosts; entries from these are skipped when dumping
@@ -211,7 +212,7 @@ func readDEB822File(path string) ([]SourceEntry, error) {
 // Note: composite "Types: deb deb-src" is not yet handled; such stanzas
 // are treated as "deb" only. TODO: handle "deb deb-src" correctly.
 func parseDEB822Stanza(lines []string) (SourceEntry, bool) {
-	var types, uris, suites, components, architectures string
+	var types, uris, suites, components, architectures, signedBy string
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -231,6 +232,8 @@ func parseDEB822Stanza(lines []string) (SourceEntry, bool) {
 				components = val
 			case "Architectures":
 				architectures = val
+			case "Signed-By":
+				signedBy = val
 			}
 		}
 	}
@@ -253,5 +256,16 @@ func parseDEB822Stanza(lines []string) (SourceEntry, bool) {
 	if components != "" {
 		line += " " + components
 	}
-	return SourceEntry{Type: "deb", AptfileLine: line}, true
+	entry := SourceEntry{Type: "deb", AptfileLine: line}
+
+	// If the stanza has a Signed-By key path, try to read the companion URL file
+	// written by apt-bundle when the key was downloaded. If found, populate KeyURL
+	// so the dump command can emit a "key <url>" directive for round-trip fidelity.
+	if signedBy != "" {
+		if urlData, err := os.ReadFile(signedBy + ".url"); err == nil {
+			entry.KeyURL = strings.TrimSpace(string(urlData))
+		}
+	}
+
+	return entry, true
 }

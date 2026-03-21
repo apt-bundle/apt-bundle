@@ -372,6 +372,105 @@ func TestEntry(t *testing.T) {
 	}
 }
 
+func TestKeyNameParsing(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		wantVal  string
+		wantName string
+		wantErr  bool
+	}{
+		{
+			name:     "key without name",
+			line:     "key https://example.com/key.gpg",
+			wantVal:  "https://example.com/key.gpg",
+			wantName: "",
+		},
+		{
+			name:     "key with simple name",
+			line:     "key https://example.com/key.gpg as mykey",
+			wantVal:  "https://example.com/key.gpg",
+			wantName: "mykey",
+		},
+		{
+			name:     "key with hyphenated name",
+			line:     "key https://repo.charm.sh/apt/gpg.key as charm-key",
+			wantVal:  "https://repo.charm.sh/apt/gpg.key",
+			wantName: "charm-key",
+		},
+		{
+			name:     "key with dot in name",
+			line:     "key https://example.com/key.gpg as my.key",
+			wantVal:  "https://example.com/key.gpg",
+			wantName: "my.key",
+		},
+		{
+			name:     "key with underscore in name",
+			line:     "key https://example.com/key.gpg as my_key",
+			wantVal:  "https://example.com/key.gpg",
+			wantName: "my_key",
+		},
+		{
+			name:    "key with invalid name (starts with hyphen)",
+			line:    "key https://example.com/key.gpg as -invalid",
+			wantErr: true,
+		},
+		{
+			name:    "key with invalid name (contains space - parsed as two words, last wins)",
+			line:    "key https://example.com/key.gpg as invalid!name",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, err := parseLine(tt.line, 1, tt.line)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseLine() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			if entry.Value != tt.wantVal {
+				t.Errorf("Entry.Value = %q, want %q", entry.Value, tt.wantVal)
+			}
+			if entry.Name != tt.wantName {
+				t.Errorf("Entry.Name = %q, want %q", entry.Name, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestKeyNameInFullAptfile(t *testing.T) {
+	content := `key https://repo.charm.sh/apt/gpg.key as charm
+deb "[signed-by=charm] https://repo.charm.sh/apt/ * *"
+key https://example.com/key.gpg
+deb "https://example.com/apt/ stable main"
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "Aptfile")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := Parse(tmpFile)
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 entries, got %d", len(entries))
+	}
+	if entries[0].Type != EntryTypeKey || entries[0].Value != "https://repo.charm.sh/apt/gpg.key" || entries[0].Name != "charm" {
+		t.Errorf("entry[0]: got type=%s value=%q name=%q", entries[0].Type, entries[0].Value, entries[0].Name)
+	}
+	if entries[1].Type != EntryTypeDeb || entries[1].Value != "[signed-by=charm] https://repo.charm.sh/apt/ * *" {
+		t.Errorf("entry[1]: got type=%s value=%q", entries[1].Type, entries[1].Value)
+	}
+	if entries[2].Type != EntryTypeKey || entries[2].Name != "" {
+		t.Errorf("entry[2]: expected key with no name, got name=%q", entries[2].Name)
+	}
+}
+
 func TestParseScannerError(t *testing.T) {
 	t.Run("line too long triggers scanner error", func(t *testing.T) {
 		tmpDir := t.TempDir()

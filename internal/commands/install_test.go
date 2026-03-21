@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
@@ -521,6 +522,108 @@ func TestRunInstallWithMock(t *testing.T) {
 
 		if checkCalls == 0 {
 			t.Error("Expected IsPackageInstalled to be called")
+		}
+	})
+}
+
+func TestExtractDebSignedBy(t *testing.T) {
+	tests := []struct {
+		name            string
+		line            string
+		wantCleanedLine string
+		wantSignedBy    string
+	}{
+		{
+			name:            "no bracket options",
+			line:            "https://repo.charm.sh/apt/ * *",
+			wantCleanedLine: "https://repo.charm.sh/apt/ * *",
+			wantSignedBy:    "",
+		},
+		{
+			name:            "signed-by only in bracket",
+			line:            "[signed-by=charm] https://repo.charm.sh/apt/ * *",
+			wantCleanedLine: "https://repo.charm.sh/apt/ * *",
+			wantSignedBy:    "charm",
+		},
+		{
+			name:            "signed-by with arch in bracket",
+			line:            "[arch=amd64 signed-by=charm] https://download.docker.com/linux/ubuntu focal stable",
+			wantCleanedLine: "[arch=amd64] https://download.docker.com/linux/ubuntu focal stable",
+			wantSignedBy:    "charm",
+		},
+		{
+			name:            "signed-by first then arch",
+			line:            "[signed-by=charm arch=amd64] https://example.com/apt focal main",
+			wantCleanedLine: "[arch=amd64] https://example.com/apt focal main",
+			wantSignedBy:    "charm",
+		},
+		{
+			name:            "arch only in bracket",
+			line:            "[arch=amd64] https://example.com/apt focal main",
+			wantCleanedLine: "[arch=amd64] https://example.com/apt focal main",
+			wantSignedBy:    "",
+		},
+		{
+			name:            "signed-by with absolute path",
+			line:            "[signed-by=/etc/apt/keyrings/foo.gpg] https://example.com/apt focal main",
+			wantCleanedLine: "https://example.com/apt focal main",
+			wantSignedBy:    "/etc/apt/keyrings/foo.gpg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotLine, gotSignedBy, err := extractDebSignedBy(tt.line)
+			if err != nil {
+				t.Fatalf("extractDebSignedBy() error: %v", err)
+			}
+			if gotLine != tt.wantCleanedLine {
+				t.Errorf("cleanedLine = %q, want %q", gotLine, tt.wantCleanedLine)
+			}
+			if gotSignedBy != tt.wantSignedBy {
+				t.Errorf("signedByValue = %q, want %q", gotSignedBy, tt.wantSignedBy)
+			}
+		})
+	}
+}
+
+func TestRunInstallNamedKey(t *testing.T) {
+	t.Run("unknown named key returns error", func(t *testing.T) {
+		cleanup := setupMockRoot()
+		defer cleanup()
+
+		tmpDir := t.TempDir()
+		mock := testutil.NewMockExecutor()
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor:      mock,
+			KeyringDir:    filepath.Join(tmpDir, "keyrings"),
+			SourcesDir:    filepath.Join(tmpDir, "sources"),
+			SourcesPrefix: "apt-bundle-",
+			StatePath:     func() string { return filepath.Join(tmpDir, "state.json") },
+		}
+		defer func() { mgr = origMgr }()
+
+		noUpdate = true
+		defer func() { noUpdate = false }()
+
+		tmpFile := filepath.Join(tmpDir, "Aptfile")
+		// deb line references "charm" but no key with that name was defined
+		content := "deb \"[signed-by=charm] https://repo.charm.sh/apt/ * *\"\n"
+		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origPath := aptfilePath
+		aptfilePath = tmpFile
+		defer func() { aptfilePath = origPath }()
+
+		err := runInstall(installCmd, []string{})
+		if err == nil {
+			t.Error("expected error for unknown key name, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "charm") {
+			t.Errorf("error should mention key name 'charm', got: %v", err)
 		}
 	})
 }

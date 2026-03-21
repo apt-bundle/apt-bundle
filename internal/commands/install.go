@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/apt-bundle/apt-bundle/internal/apt"
 	"github.com/apt-bundle/apt-bundle/internal/aptfile"
@@ -68,6 +69,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	var pendingKeyPath string
 	var reposAdded bool
+	namedKeys := make(map[string]string) // name → key path (from "key <url> as <name>")
 
 	for _, entry := range entries {
 		switch entry.Type {
@@ -78,6 +80,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			}
 			pendingKeyPath = keyPath
 			state.AddKey(keyPath)
+			if entry.Name != "" {
+				namedKeys[entry.Name] = keyPath
+			}
 
 		case aptfile.EntryTypePPA:
 			if err := mgr.AddPPA(entry.Value); err != nil {
@@ -87,7 +92,25 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			reposAdded = true
 
 		case aptfile.EntryTypeDeb:
-			sourcePath, err := mgr.AddDebRepository(entry.Value, pendingKeyPath)
+			cleanedLine, signedByValue, err := extractDebSignedBy(entry.Value)
+			if err != nil {
+				return fmt.Errorf("failed to parse deb line: %w", err)
+			}
+			keyPath := pendingKeyPath
+			if signedByValue != "" {
+				if strings.HasPrefix(signedByValue, "/") {
+					// Direct absolute path reference
+					keyPath = signedByValue
+				} else {
+					// Named key reference — must have been declared with "key ... as <name>"
+					resolved, ok := namedKeys[signedByValue]
+					if !ok {
+						return fmt.Errorf("deb line references key %q via signed-by=, but no 'key <url> as %s' was defined before this line", signedByValue, signedByValue)
+					}
+					keyPath = resolved
+				}
+			}
+			sourcePath, err := mgr.AddDebRepository(cleanedLine, keyPath)
 			if err != nil {
 				return fmt.Errorf("failed to add repository: %w", err)
 			}
@@ -157,6 +180,49 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// extractDebSignedBy extracts and removes a "signed-by=<value>" option from the
+// bracket options of a deb line. It returns the cleaned line (with signed-by removed)
+// and the extracted value. Other bracket options (e.g. arch=amd64) are preserved.
+// If no signed-by option is present, the original line and an empty string are returned.
+//
+// Examples:
+//
+//	"[signed-by=charm] https://..."      → "https://...", "charm"
+//	"[arch=amd64 signed-by=charm] https://..." → "[arch=amd64] https://...", "charm"
+//	"https://..."                         → "https://...", ""
+func extractDebSignedBy(line string) (cleanedLine string, signedByValue string, err error) {
+	if !strings.HasPrefix(line, "[") {
+		return line, "", nil
+	}
+	closeBracket := strings.Index(line, "]")
+	if closeBracket < 0 {
+		return line, "", nil
+	}
+
+	bracketContent := line[1:closeBracket]
+	rest := line[closeBracket+1:]
+
+	var otherOptions []string
+	for _, opt := range strings.Fields(bracketContent) {
+		if strings.HasPrefix(opt, "signed-by=") {
+			signedByValue = strings.TrimPrefix(opt, "signed-by=")
+		} else {
+			otherOptions = append(otherOptions, opt)
+		}
+	}
+
+	if signedByValue == "" {
+		return line, "", nil
+	}
+
+	if len(otherOptions) == 0 {
+		cleanedLine = strings.TrimSpace(rest)
+	} else {
+		cleanedLine = "[" + strings.Join(otherOptions, " ") + "]" + rest
+	}
+	return cleanedLine, signedByValue, nil
+}
+
 func writeLockFileFromPackages(packages []string) error {
 	// The skipped-packages list is intentionally dropped here; unlike the
 	// standalone lock command, install --lock does not warn about uninstalled packages.
@@ -191,7 +257,10 @@ func runInstallDryRun(entries []aptfile.Entry) error {
 				wouldAddRepos = append(wouldAddRepos, line)
 			}
 		case aptfile.EntryTypeDeb:
-			line := "deb " + entry.Value
+			// Strip signed-by=<name> from bracket options before comparing, since
+			// ListCustomSources does not include signed-by in its AptfileLine output.
+			cleanedValue, _, _ := extractDebSignedBy(entry.Value)
+			line := "deb " + cleanedValue
 			if !sourceLines[line] {
 				wouldAddRepos = append(wouldAddRepos, line)
 			}

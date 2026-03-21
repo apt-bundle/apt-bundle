@@ -13,12 +13,15 @@ var dumpCmd = &cobra.Command{
 	Use:   "dump",
 	Short: "Generate an Aptfile from the current system state",
 	Long: `Dump generates an Aptfile by listing all manually installed packages
-and optionally custom PPAs and repositories from the system.
+and custom PPAs and repositories from the system.
 
-Limitation: Repositories that use Signed-By (GPG keys) are emitted as deb lines
-only. The corresponding key directive is not included, since dump reads from
-.sources files which store key paths, not URLs. When installing from a dumped
-Aptfile, you may need to add key directives manually for custom repositories.`,
+For repositories managed by apt-bundle that use Signed-By (GPG keys), the
+corresponding key directive is emitted automatically when the key was downloaded
+by apt-bundle (which stores the original URL alongside the key file).
+
+For repositories added by other tools or older versions of apt-bundle, the key
+directive may not be available; in that case only the deb line is emitted and
+you may need to add the key directive manually.`,
 	RunE: runDump,
 }
 
@@ -53,6 +56,9 @@ func runDump(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "# --- Repositories ---")
 		for _, e := range sources {
+			if e.KeyURL != "" {
+				fmt.Fprintln(w, "key", e.KeyURL)
+			}
 			fmt.Fprintln(w, e.AptfileLine)
 		}
 	}

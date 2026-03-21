@@ -29,7 +29,8 @@ func TestAddGPGKey(t *testing.T) {
 			},
 		}
 
-		keyPath, err := m.AddGPGKey("https://example.com/key.gpg")
+		const keyURL = "https://example.com/key.gpg"
+		keyPath, err := m.AddGPGKey(keyURL)
 		if err != nil {
 			t.Fatalf("AddGPGKey failed: %v", err)
 		}
@@ -38,6 +39,15 @@ func TestAddGPGKey(t *testing.T) {
 		}
 		if _, err := os.Stat(keyPath); err != nil {
 			t.Errorf("Key file should exist at %s: %v", keyPath, err)
+		}
+
+		// Verify companion URL file was written
+		urlFilePath := keyPath + ".url"
+		urlData, err := os.ReadFile(urlFilePath)
+		if err != nil {
+			t.Errorf("Companion URL file should exist at %s: %v", urlFilePath, err)
+		} else if string(urlData) != keyURL {
+			t.Errorf("Companion URL file content = %q, want %q", string(urlData), keyURL)
 		}
 	})
 
@@ -135,6 +145,29 @@ func TestRemoveGPGKey(t *testing.T) {
 
 		if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
 			t.Error("Key file should have been removed")
+		}
+	})
+
+	t.Run("remove existing key and companion URL file", func(t *testing.T) {
+		keyPath := filepath.Join(tmpDir, "test-with-url.gpg")
+		urlFilePath := keyPath + ".url"
+		if err := os.WriteFile(keyPath, []byte("key data"), 0644); err != nil {
+			t.Fatalf("Failed to create key file: %v", err)
+		}
+		if err := os.WriteFile(urlFilePath, []byte("https://example.com/key.gpg"), 0644); err != nil {
+			t.Fatalf("Failed to create URL file: %v", err)
+		}
+
+		err := m.RemoveGPGKey(keyPath)
+		if err != nil {
+			t.Errorf("RemoveGPGKey failed: %v", err)
+		}
+
+		if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
+			t.Error("Key file should have been removed")
+		}
+		if _, err := os.Stat(urlFilePath); !os.IsNotExist(err) {
+			t.Error("Companion URL file should have been removed")
 		}
 	})
 

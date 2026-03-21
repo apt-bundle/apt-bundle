@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -17,12 +18,18 @@ const (
 	EntryTypeKey EntryType = "key"
 )
 
+// validKeyNameRe matches valid key alias names used in "key <url> as <name>".
+// Names must start with an alphanumeric character and may contain alphanumeric
+// characters, dots, hyphens, or underscores.
+var validKeyNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+
 // Entry represents a single parsed directive from an Aptfile, including
 // the directive type, its argument value, the source line number, and
 // the original unparsed line text.
 type Entry struct {
 	Type     EntryType
 	Value    string
+	Name     string // optional alias for key directives: "key <url> as <name>"
 	LineNum  int
 	Original string
 }
@@ -92,9 +99,27 @@ func parseLine(line string, lineNum int, original string) (Entry, error) {
 		return Entry{}, fmt.Errorf("unknown directive: %s", directive)
 	}
 
+	// For key directives, parse optional "as <name>" suffix.
+	// Example: key https://example.com/key.gpg as mykey
+	var name string
+	if entryType == EntryTypeKey {
+		if idx := strings.LastIndex(value, " as "); idx >= 0 {
+			potentialName := strings.TrimSpace(value[idx+4:])
+			// Only treat as a name if it's a single word (no spaces) and non-empty.
+			if potentialName != "" && !strings.Contains(potentialName, " ") {
+				if !validKeyNameRe.MatchString(potentialName) {
+					return Entry{}, fmt.Errorf("invalid key name %q: must start with alphanumeric and contain only alphanumeric, dot, hyphen, or underscore", potentialName)
+				}
+				name = potentialName
+				value = strings.TrimSpace(value[:idx])
+			}
+		}
+	}
+
 	return Entry{
 		Type:     entryType,
 		Value:    value,
+		Name:     name,
 		LineNum:  lineNum,
 		Original: original,
 	}, nil

@@ -111,6 +111,13 @@ func (m *AptManager) AddGPGKey(keyURL string) (string, error) {
 		return "", fmt.Errorf("failed to write key file: %w", err)
 	}
 
+	// Write companion URL file so the dump command can reconstruct key directives.
+	urlFilePath := keyPath + ".url"
+	if err := os.WriteFile(urlFilePath, []byte(keyURL), 0644); err != nil {
+		// Non-fatal: dump round-trip will not include this key, but install still works.
+		fmt.Fprintf(os.Stderr, "warning: failed to write key URL file %s: %v\n", urlFilePath, err)
+	}
+
 	fmt.Printf("✓ GPG key saved to: %s\n", keyPath)
 	return keyPath, nil
 }
@@ -135,13 +142,15 @@ func (m *AptManager) dearmorKey(data []byte) ([]byte, error) {
 	}
 	tmpFile.Close()
 
-	// Create a temp file for the dearmored output
+	// Create a temp file to reserve the output path, then remove it so gpg can
+	// write to that path without refusing to overwrite an existing file.
 	outFile, err := os.CreateTemp("", "apt-bundle-key-*.gpg")
 	if err != nil {
 		return nil, fmt.Errorf("create temp output file for dearmor: %w", err)
 	}
 	outPath := outFile.Name()
 	outFile.Close()
+	os.Remove(outPath) // gpg refuses to overwrite existing files; remove before writing
 	defer os.Remove(outPath)
 
 	// Run gpg --dearmor
@@ -153,10 +162,12 @@ func (m *AptManager) dearmorKey(data []byte) ([]byte, error) {
 	return os.ReadFile(outPath)
 }
 
-// RemoveGPGKey removes a GPG key file
+// RemoveGPGKey removes a GPG key file and its companion URL file (if present)
 func (m *AptManager) RemoveGPGKey(keyPath string) error {
 	if err := os.Remove(keyPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove key: %w", err)
 	}
+	// Best-effort removal of companion URL file; ignore errors.
+	_ = os.Remove(keyPath + ".url")
 	return nil
 }

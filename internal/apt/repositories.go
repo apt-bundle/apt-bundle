@@ -10,9 +10,12 @@ import (
 	"strings"
 )
 
+// SourcesDir is where apt sources files are stored.
+// It is exported as a package-level variable solely to allow test
+// overrides; production code should not modify it.
+var SourcesDir = "/etc/apt/sources.list.d"
+
 const (
-	// SourcesDir is where apt sources files are stored
-	SourcesDir = "/etc/apt/sources.list.d"
 	// SourcesPrefix is the prefix for apt-bundle managed sources files
 	SourcesPrefix = "apt-bundle-"
 )

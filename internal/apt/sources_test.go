@@ -253,6 +253,79 @@ Suites: jammy
 	}
 }
 
+func TestParseDEB822StanzaSignedBy(t *testing.T) {
+	t.Run("Signed-By with companion URL file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		keyPath := filepath.Join(tmpDir, "apt-bundle-abc123.gpg")
+		urlFilePath := keyPath + ".url"
+		const keyURL = "https://repo.charm.sh/apt/gpg.key"
+
+		if err := os.WriteFile(keyPath, []byte("fake key"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(urlFilePath, []byte(keyURL), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		content := "Types: deb\nURIs: https://repo.charm.sh/apt\nSuites: *\nComponents: *\nSigned-By: " + keyPath + "\n"
+		path := filepath.Join(tmpDir, "charm.sources")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		entries, err := readDEB822File(path)
+		if err != nil {
+			t.Fatalf("readDEB822File: %v", err)
+		}
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+		if entries[0].KeyURL != keyURL {
+			t.Errorf("KeyURL = %q, want %q", entries[0].KeyURL, keyURL)
+		}
+	})
+
+	t.Run("Signed-By without companion URL file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		content := "Types: deb\nURIs: https://example.com/apt\nSuites: focal\nSigned-By: /etc/apt/keyrings/no-url-file.gpg\n"
+		path := filepath.Join(tmpDir, "test.sources")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		entries, err := readDEB822File(path)
+		if err != nil {
+			t.Fatalf("readDEB822File: %v", err)
+		}
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+		if entries[0].KeyURL != "" {
+			t.Errorf("KeyURL should be empty when URL file absent, got %q", entries[0].KeyURL)
+		}
+	})
+
+	t.Run("no Signed-By field", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		content := "Types: deb\nURIs: https://example.com/apt\nSuites: focal\nComponents: main\n"
+		path := filepath.Join(tmpDir, "test.sources")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		entries, err := readDEB822File(path)
+		if err != nil {
+			t.Fatalf("readDEB822File: %v", err)
+		}
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+		if entries[0].KeyURL != "" {
+			t.Errorf("KeyURL should be empty when no Signed-By, got %q", entries[0].KeyURL)
+		}
+	})
+}
+
 func TestReadDEB822FileMultiStanza(t *testing.T) {
 	content := `Types: deb
 URIs: https://repo-a.example.com/apt

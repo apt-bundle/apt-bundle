@@ -3,6 +3,8 @@ package commands
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,6 +57,75 @@ func TestRunDump(t *testing.T) {
 		vimIdx := strings.Index(out, "apt vim")
 		if curlIdx > gitIdx || gitIdx > vimIdx {
 			t.Errorf("packages should be sorted: curl < git < vim, got positions curl=%d git=%d vim=%d", curlIdx, gitIdx, vimIdx)
+		}
+	})
+
+	t.Run("emits key directive before deb line when KeyURL is known", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		sourcesDir := filepath.Join(tmpDir, "sources.list.d")
+		sourcesList := filepath.Join(tmpDir, "sources.list")
+		if err := os.MkdirAll(sourcesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		// Write a key file and its companion URL file
+		keyPath := filepath.Join(tmpDir, "keyrings", "apt-bundle-test.gpg")
+		if err := os.MkdirAll(filepath.Dir(keyPath), 0755); err != nil {
+			t.Fatal(err)
+		}
+		const keyURL = "https://repo.charm.sh/apt/gpg.key"
+		if err := os.WriteFile(keyPath, []byte("fake key"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(keyPath+".url", []byte(keyURL), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Write a .sources file that references the key
+		sourcesContent := "Types: deb\nURIs: https://repo.charm.sh/apt\nSuites: *\nComponents: *\nSigned-By: " + keyPath + "\n"
+		if err := os.WriteFile(filepath.Join(sourcesDir, "charm.sources"), []byte(sourcesContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		mock := testutil.NewMockExecutor()
+		mock.OutputFunc = func(name string, args ...string) ([]byte, error) {
+			if name == "apt-mark" && len(args) > 0 && args[0] == "showmanual" {
+				return []byte(""), nil
+			}
+			return nil, errors.New("unexpected command")
+		}
+		origMgr := mgr
+		mgr = &apt.AptManager{
+			Executor: mock,
+		}
+		defer func() { mgr = origMgr }()
+
+		// Override the sources paths used by ListCustomSources
+		origSourcesListPath := apt.SourcesListPath
+		apt.SourcesListPath = sourcesList
+		defer func() { apt.SourcesListPath = origSourcesListPath }()
+		origSourcesDir := apt.SourcesDir
+		apt.SourcesDir = sourcesDir
+		defer func() { apt.SourcesDir = origSourcesDir }()
+
+		var buf bytes.Buffer
+		dumpCmd.SetOut(&buf)
+		defer dumpCmd.SetOut(nil)
+
+		err := runDump(dumpCmd, []string{})
+		if err != nil {
+			t.Fatalf("runDump: %v", err)
+		}
+
+		out := buf.String()
+		if !strings.Contains(out, "key "+keyURL) {
+			t.Errorf("output should contain 'key %s', got:\n%s", keyURL, out)
+		}
+		// key line must appear before deb line
+		keyIdx := strings.Index(out, "key "+keyURL)
+		debIdx := strings.Index(out, "deb ")
+		if keyIdx > debIdx {
+			t.Errorf("key line should appear before deb line in output")
 		}
 	})
 
