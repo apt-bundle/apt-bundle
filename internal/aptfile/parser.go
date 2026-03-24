@@ -60,6 +60,11 @@ func Parse(filePath string) ([]Entry, error) {
 			continue
 		}
 
+		line = stripInlineComment(line)
+		if line == "" {
+			continue
+		}
+
 		entry, err := parseLine(line, lineNum, original)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNum, err)
@@ -162,6 +167,28 @@ func ExtractPkgName(spec string) string {
 		return spec[:idx]
 	}
 	return spec
+}
+
+// stripInlineComment removes an inline comment from a line. A ` #` (whitespace
+// followed by `#`) outside of a quoted string is treated as the start of an
+// inline comment; everything from that point to end-of-line is discarded.
+func stripInlineComment(line string) string {
+	inQuotes := false
+	quoteChar := rune(0)
+	runes := []rune(line)
+	for i, r := range runes {
+		switch {
+		case (r == '"' || r == '\'') && !inQuotes:
+			inQuotes = true
+			quoteChar = r
+		case r == quoteChar && inQuotes:
+			inQuotes = false
+			quoteChar = 0
+		case r == '#' && !inQuotes && i > 0 && (runes[i-1] == ' ' || runes[i-1] == '\t'):
+			return strings.TrimRight(string(runes[:i]), " \t")
+		}
+	}
+	return line
 }
 
 func unquote(s string) string {

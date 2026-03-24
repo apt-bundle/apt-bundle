@@ -471,6 +471,97 @@ deb "https://example.com/apt/ stable main"
 	}
 }
 
+func TestStripInlineComment(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "no comment",
+			input: "apt curl",
+			want:  "apt curl",
+		},
+		{
+			name:  "inline comment",
+			input: "apt bat # cat alternative",
+			want:  "apt bat",
+		},
+		{
+			name:  "inline comment with tab before hash",
+			input: "apt bat\t# cat alternative",
+			want:  "apt bat",
+		},
+		{
+			name:  "ppa with inline comment",
+			input: "ppa ppa:foo/bar # some PPA",
+			want:  "ppa ppa:foo/bar",
+		},
+		{
+			name:  "hash inside value (no preceding space) is preserved",
+			input: "apt pkg#1",
+			want:  "apt pkg#1",
+		},
+		{
+			name:  "hash inside quoted string is preserved",
+			input: `deb "http://example.com/repo#foo main" # comment`,
+			want:  `deb "http://example.com/repo#foo main"`,
+		},
+		{
+			name:  "key with inline comment",
+			input: "key https://example.com/key.gpg # my key",
+			want:  "key https://example.com/key.gpg",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripInlineComment(tt.input)
+			if got != tt.want {
+				t.Errorf("stripInlineComment(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseInlineComments(t *testing.T) {
+	content := `# full-line comment
+apt bat # cat with syntax highlighting
+apt ripgrep # fast grep alternative (binary: rg)
+ppa ppa:deadsnakes/ppa # Python versions
+key https://example.com/key.gpg # signing key
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "Aptfile")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	entries, err := Parse(tmpFile)
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 entries, got %d", len(entries))
+	}
+	if entries[0].Value != "bat" {
+		t.Errorf("entries[0].Value = %q, want %q", entries[0].Value, "bat")
+	}
+	if entries[1].Value != "ripgrep" {
+		t.Errorf("entries[1].Value = %q, want %q", entries[1].Value, "ripgrep")
+	}
+	if entries[2].Value != "ppa:deadsnakes/ppa" {
+		t.Errorf("entries[2].Value = %q, want %q", entries[2].Value, "ppa:deadsnakes/ppa")
+	}
+	if entries[3].Value != "https://example.com/key.gpg" {
+		t.Errorf("entries[3].Value = %q, want %q", entries[3].Value, "https://example.com/key.gpg")
+	}
+}
+
 func TestParseScannerError(t *testing.T) {
 	t.Run("line too long triggers scanner error", func(t *testing.T) {
 		tmpDir := t.TempDir()
