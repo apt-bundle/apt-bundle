@@ -55,7 +55,7 @@ if [ "$USE_DOCKER" = true ]; then
 else
     for arch in amd64 arm64 armhf i386; do
         echo "  - ${arch}"
-        dpkg-scanpackages --arch "${arch}" "${REPO_DIR}/pool/main" 2>/dev/null | \
+        (cd "${REPO_DIR}" && dpkg-scanpackages --arch "${arch}" pool/main 2>/dev/null) | \
             grep -v "^dpkg-scanpackages:" > "${DISTS_DIR}/main/binary-${arch}/Packages"
         gzip -k -f "${DISTS_DIR}/main/binary-${arch}/Packages"
     done

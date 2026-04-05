@@ -38,6 +38,9 @@ go.work
 # Note: .env is a symlink to .local/secrets/.env (secrets directory is gitignored)
 .env
 
+# APT repository binary packages (served from GitHub releases via Cloudflare redirect)
+docs/repo/pool/**/*.deb
+
 # Jekyll build artifacts (in docs/)
 docs/_site/
 docs/.sass-cache/
