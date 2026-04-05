@@ -3,14 +3,10 @@ description: A declarative package manager for apt, inspired by Homebrew's brew 
 url: https://apt-bundle.org
 baseurl: ""
 
-# Theme
-remote_theme: just-the-docs/just-the-docs
-
 # Plugins
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
-  - jekyll-remote-theme
 
 # Exclude from processing
 exclude:
@@ -24,18 +20,4 @@ exclude:
   - .gitignore
   - testing.md
 
-# Navigation
-nav_order: 1
-aux_links:
-  "GitHub Repository":
-    - https://github.com/apt-bundle/apt-bundle
-
-# Footer content
-footer_content: "Released under the Apache 2.0 License"
-
-# Color scheme - use nil for default, or specify: light, dark
-# color_scheme: light
-
-# Search
-search_enabled: true
 

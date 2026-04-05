@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }} — apt-bundle</title>
+  <meta name="description" content="A declarative, Brewfile-like wrapper for apt. Define your system dependencies in an Aptfile and install them with a single command.">
+  <link rel="canonical" href="https://apt-bundle.org/{{ page.url | remove: '/' }}">
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      var prefer = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      if ((saved || prefer) === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080b10;
+      --surface:   #0e1219;
+      --border:    #1a2030;
+      --text:      #d8dde8;
+      --heading:   #ffffff;
+      --muted:     #5a6480;
+      --accent:    #60a5fa;
+      --accent-dim:#1e3a5f;
+      --green:     #4ade80;
+      --yellow:    #fbbf24;
+      --red:       #f87171;
+      --code-bg:   #0a0f18;
+      --code-text: #c9d1e8;
+      --radius:    6px;
+      --mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f8fafc;
+      --surface:   #f1f5f9;
+      --border:    #e2e8f0;
+      --text:      #1e293b;
+      --heading:   #0f172a;
+      --muted:     #64748b;
+      --accent:    #2563eb;
+      --accent-dim:#dbeafe;
+      --green:     #16a34a;
+      --yellow:    #d97706;
+      --red:       #dc2626;
+      --code-bg:   #0a0f18;
+      --code-text: #c9d1e8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 0;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+    .logo:hover { text-decoration: none; }
+    .logo span { color: var(--accent); }
+    .header-nav { display: flex; align-items: center; }
+    .header-nav a {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-left: 24px;
+    }
+    .header-nav a:hover { color: var(--text); text-decoration: none; }
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--muted);
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 20px;
+      flex-shrink: 0;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .theme-toggle:hover { color: var(--text); border-color: var(--muted); }
+    .theme-toggle svg { width: 15px; height: 15px; fill: currentColor; }
+
+    /* ── Layout ── */
+    .page-layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky;
+      top: 80px;
+    }
+    .sidebar-section {
+      margin-bottom: 28px;
+    }
+    .sidebar-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .sidebar-nav {
+      list-style: none;
+    }
+    .sidebar-nav li { margin-bottom: 2px; }
+    .sidebar-nav a {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background 0.1s, color 0.1s;
+      text-decoration: none;
+    }
+    .sidebar-nav a:hover {
+      color: var(--text);
+      background: var(--surface);
+    }
+    .sidebar-nav a.active {
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+
+    /* ── Prose content ── */
+    .prose { min-width: 0; }
+
+    .prose h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--heading);
+      margin-bottom: 24px;
+    }
+    .prose h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--heading);
+      margin-top: 48px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prose h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--heading);
+      margin-top: 28px;
+      margin-bottom: 10px;
+    }
+    .prose h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 20px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .prose p {
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .prose ul, .prose ol {
+      margin: 0 0 16px 20px;
+    }
+    .prose li {
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .prose li > ul, .prose li > ol {
+      margin-top: 6px;
+      margin-bottom: 0;
+    }
+    .prose strong { color: var(--heading); }
+
+    /* Inline code */
+    .prose p code,
+    .prose li code,
+    .prose td code,
+    .prose h3 code {
+      font-family: var(--mono);
+      font-size: 0.82em;
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Code blocks */
+    .prose pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin: 0 0 20px;
+      overflow-x: auto;
+    }
+    .prose pre code {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--code-text);
+      background: none;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    /* Tables */
+    .prose table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin-bottom: 20px;
+    }
+    .prose th {
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prose td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--text);
+    }
+    .prose tr:last-child td { border-bottom: none; }
+
+    /* Blockquotes */
+    .prose blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 12px 20px;
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .prose blockquote p { color: var(--muted); margin-bottom: 0; }
+    .prose blockquote strong { color: var(--text); }
+
+    /* Horizontal rules */
+    .prose hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .footer-logo span { color: var(--accent); }
+    footer p { font-size: 0.8rem; color: var(--muted); }
+    .footer-nav a {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-left: 20px;
+    }
+    .footer-nav a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Mobile ── */
+    @media (max-width: 720px) {
+      .page-layout {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding-top: 32px;
+      }
+      .sidebar {
+        position: static;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 24px;
+      }
+      .sidebar-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .sidebar-nav li { margin-bottom: 0; }
+      .sidebar-label { display: none; }
+      footer .footer-inner { flex-direction: column; align-items: flex-start; }
+      .footer-nav a:first-child { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo"><span>apt</span>-bundle</a>
+    <nav class="header-nav">
+      <a href="aptfile-format.html">Aptfile</a>
+      <a href="usage.html">Docs</a>
+      <a href="https://github.com/apt-bundle/apt-bundle">GitHub</a>
+      <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+        <svg id="icon-sun" viewBox="0 0 24 24" style="display:none"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-16a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm9 9a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2h1zM4 12a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2h1zm14.95 5.536a1 1 0 0 1-1.414 1.414l-.707-.707a1 1 0 1 1 1.414-1.414l.707.707zm-12.728 0 .707.707a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.414zm12.728-13.072-.707.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 1.414zm-12.728 0a1 1 0 0 1 1.414 1.414l-.707.707A1 1 0 1 1 4.808 4.95l.707-.707z"/></svg>
+        <svg id="icon-moon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="page-layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Getting Started</div>
+      <ul class="sidebar-nav">
+        <li><a href="installation.html" {% if page.url contains 'installation' %}class="active"{% endif %}>Installation</a></li>
+        <li><a href="usage.html" {% if page.url contains 'usage' %}class="active"{% endif %}>Usage</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Reference</div>
+      <ul class="sidebar-nav">
+        <li><a href="aptfile-format.html" {% if page.url contains 'aptfile-format' %}class="active"{% endif %}>Aptfile Format</a></li>
+        <li><a href="github-actions.html" {% if page.url contains 'github-actions' %}class="active"{% endif %}>GitHub Actions</a></li>
+        <li><a href="api-reference.html" {% if page.url contains 'api-reference' %}class="active"{% endif %}>API Reference</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Contributing</div>
+      <ul class="sidebar-nav">
+        <li><a href="contributing.html" {% if page.url contains 'contributing' %}class="active"{% endif %}>Contributing</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="prose">
+    {{ content }}
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <a href="/" class="footer-logo"><span>apt</span>-bundle</a>
+    <p>Released under the <a href="https://github.com/apt-bundle/apt-bundle/blob/main/LICENSE">Apache 2.0 License</a></p>
+    <nav class="footer-nav">
+      <a href="installation.html">Install</a>
+      <a href="usage.html">Docs</a>
+      <a href="aptfile-format.html">Aptfile</a>
+      <a href="github-actions.html">GitHub Actions</a>
+      <a href="https://github.com/apt-bundle/apt-bundle">GitHub</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    var html = document.documentElement;
+    var isLight = html.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      html.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      html.setAttribute('data-theme', 'light');
+      localStorage.setItem('theme', 'light');
+    }
+    updateIcon();
+  }
+
+  function updateIcon() {
+    var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    document.getElementById('icon-sun').style.display = isLight ? 'block' : 'none';
+    document.getElementById('icon-moon').style.display = isLight ? 'none' : 'block';
+  }
+
+  // Highlight active sidebar link from URL
+  (function() {
+    var path = window.location.pathname.split('/').pop();
+    document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
+      if (a.getAttribute('href') === path) a.classList.add('active');
+    });
+    updateIcon();
+  })();
+</script>
+</body>
+</html>
