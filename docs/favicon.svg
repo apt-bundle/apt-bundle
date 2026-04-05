@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Document body with clipped top-right corner -->
+  <path d="M4 1 L20 1 L27 8 L27 31 L4 31 Z" fill="#2563eb"/>
+  <!-- Folded corner — lighter to suggest lifted paper -->
+  <path d="M20 1 L27 8 L20 8 Z" fill="#60a5fa"/>
+  <!-- Comment line -->
+  <rect x="7" y="13" width="14" height="1.5" rx="0.75" fill="white" opacity="0.3"/>
+  <!-- apt vim  — keyword block + value bar -->
+  <rect x="7"  y="17" width="5" height="2" rx="0.5" fill="#93c5fd"/>
+  <rect x="14" y="17" width="7" height="2" rx="0.5" fill="white" opacity="0.5"/>
+  <!-- apt curl -->
+  <rect x="7"  y="21" width="5" height="2" rx="0.5" fill="#93c5fd"/>
+  <rect x="14" y="21" width="9" height="2" rx="0.5" fill="white" opacity="0.5"/>
+  <!-- apt git -->
+  <rect x="7"  y="25" width="5" height="2" rx="0.5" fill="#93c5fd"/>
+  <rect x="14" y="25" width="5" height="2" rx="0.5" fill="white" opacity="0.5"/>
+</svg>
