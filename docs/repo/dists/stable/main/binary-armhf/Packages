@@ -6,7 +6,7 @@ Installed-Size: 5888
 Depends: apt
 Recommends: curl
 Suggests: git
-Filename: /home/runner/work/apt-bundle/apt-bundle/docs/repo/pool/main/a/apt-bundle/apt-bundle_0.2.58_linux_armhf.deb
+Filename: pool/main/a/apt-bundle/apt-bundle_0.2.58_linux_armhf.deb
 Size: 2488010
 MD5sum: fe233df55ac8a608e3629867ffb351c6
 SHA1: ceaaaf0bfe3d35d8fdfe0a88827736498f3b4afd

@@ -49,14 +49,16 @@ if [ "$USE_DOCKER" = true ]; then
         docker run --rm -v "${REPO_DIR}:/repo" -w /repo ubuntu:22.04 bash -c \
             "apt-get update -qq > /dev/null 2>&1 && apt-get install -y -qq dpkg-dev > /dev/null 2>&1 && \
              dpkg-scanpackages --arch ${arch} pool/main 2>/dev/null" | \
-            grep -v "^dpkg-scanpackages:" > "${DISTS_DIR}/main/binary-${arch}/Packages"
+            grep -v "^dpkg-scanpackages:" | \
+            sed 's|^Filename: .*/pool/|Filename: pool/|' > "${DISTS_DIR}/main/binary-${arch}/Packages"
         gzip -k -f "${DISTS_DIR}/main/binary-${arch}/Packages"
     done
 else
     for arch in amd64 arm64 armhf i386; do
         echo "  - ${arch}"
         (cd "${REPO_DIR}" && dpkg-scanpackages --arch "${arch}" pool/main 2>/dev/null) | \
-            grep -v "^dpkg-scanpackages:" > "${DISTS_DIR}/main/binary-${arch}/Packages"
+            grep -v "^dpkg-scanpackages:" | \
+            sed 's|^Filename: .*/pool/|Filename: pool/|' > "${DISTS_DIR}/main/binary-${arch}/Packages"
         gzip -k -f "${DISTS_DIR}/main/binary-${arch}/Packages"
     done
 fi

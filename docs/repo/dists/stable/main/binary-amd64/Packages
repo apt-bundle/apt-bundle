@@ -6,7 +6,7 @@ Installed-Size: 6060
 Depends: apt
 Recommends: curl
 Suggests: git
-Filename: /home/runner/work/apt-bundle/apt-bundle/docs/repo/pool/main/a/apt-bundle/apt-bundle_0.2.58_linux_amd64.deb
+Filename: pool/main/a/apt-bundle/apt-bundle_0.2.58_linux_amd64.deb
 Size: 2670866
 MD5sum: c8bcb857c137541203f8fbe76ddfd1bf
 SHA1: d3d032d865703b064f2c3cf7abc42e781f1e1ae4
